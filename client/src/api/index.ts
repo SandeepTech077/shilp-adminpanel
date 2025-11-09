@@ -11,6 +11,23 @@ export type {
   AdminProfileResponse,
 } from './adminLoginApi';
 
+// Banner API - Individual functions
+export { 
+  getBanners, 
+  uploadBannerImage, 
+  updateBannerAlt, 
+  deleteBannerImage 
+} from './bannerApi';
+export type {
+  BannerMetadata,
+  BannerSection,
+  BannersData,
+  BannerApiResponse,
+} from './bannerApi';
+
+// Image utilities
+export { getImageUrl, isImageAccessible, formatFileSize, formatUploadDate } from './imageUtils';
+
 // Import ApiError for internal use in utilities
 import { ApiError } from './config';
 

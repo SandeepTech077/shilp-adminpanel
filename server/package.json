@@ -10,7 +10,8 @@
     "test:watch": "jest --watch",
     "lint": "eslint src/**/*.js",
     "lint:fix": "eslint src/**/*.js --fix",
-    "create-admin": "node scripts/createFirstAdmin.js"
+    "create-admin": "node scripts/createFirstAdmin.js",
+    "init-banners": "node scripts/initializeBanners.js"
   },
   "keywords": [
     "nodejs",
@@ -34,7 +35,8 @@
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.8.3",
-    "morgan": "^1.10.0"
+    "morgan": "^1.10.0",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "eslint": "^9.16.0",

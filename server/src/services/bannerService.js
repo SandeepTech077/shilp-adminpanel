@@ -1,19 +1,184 @@
 const bannerRepository = require('../repositories/bannerRepository');
+const fs = require('fs');
+const path = require('path');
+
+// Simple in-memory cache to reduce database calls
+let bannersCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 30 * 1000; // 30 seconds cache
 
 const getBanners = async () => {
-  return await bannerRepository.getBanners();
+  // Temporarily disable cache to ensure fresh data
+  console.log('🔄 Fetching fresh banner data from database (cache temporarily disabled)');
+  
+  const freshData = await bannerRepository.getBanners();
+  
+  // Check if freshData is already a plain object or needs conversion
+  const cleanData = freshData.toObject ? freshData.toObject() : freshData;
+  
+  // Define all expected sections
+  const expectedSections = [
+    'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+    'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+    'termsConditionsBanner', 'privacyPolicyBanner'
+  ];
+  
+  // Check which sections are present
+  const presentSections = expectedSections.filter(section => cleanData[section]);
+  const missingSections = expectedSections.filter(section => !cleanData[section]);
+  
+  // Force add missing sections to the response
+  missingSections.forEach(section => {
+    console.log(`➕ Adding missing section to response: ${section}`);
+    cleanData[section] = {
+      banner: '',
+      mobilebanner: '',
+      alt: '',
+      bannerMetadata: {
+        uploadedAt: null,
+        filename: '',
+        originalName: '',
+        size: 0
+      },
+      mobilebannerMetadata: {
+        uploadedAt: null,
+        filename: '',
+        originalName: '',
+        size: 0
+      }
+    };
+  });
+  
+  // Re-check after adding missing sections
+  const finalPresentSections = expectedSections.filter(section => cleanData[section]);
+  
+  // Log fresh data structure
+  console.log('📋 Fresh data structure:', {
+    _id: cleanData._id,
+    documentId: cleanData.documentId,
+    expectedSections: expectedSections.length,
+    originalPresentSections: presentSections.length,
+    finalPresentSections: finalPresentSections.length,
+    missingSections: missingSections.length,
+    presentSectionsList: finalPresentSections,
+    missingSectionsList: missingSections.length > 0 ? missingSections : 'none',
+    allSectionsPresent: finalPresentSections.length === expectedSections.length,
+    totalFields: Object.keys(cleanData).length
+  });
+  
+  return cleanData;
 };
 
-const addOrUpdateBanner = async (type, files, body) => {
-  return await bannerRepository.addOrUpdateBanner(type, files, body);
+// Clear cache when data changes
+const clearBannersCache = () => {
+  bannersCache = null;
+  cacheTimestamp = null;
+  console.log('🗑️ Banner cache cleared');
 };
 
-const deleteBannerImage = async (type, key, index) => {
-  return await bannerRepository.deleteBannerImage(type, key, index);
+// Enhanced upload function with automatic previous image deletion and metadata
+const uploadBannerImage = async (section, field, imageUrl, alt, fileMetadata = {}) => {
+  try {
+    // Get current banner data to check for existing image
+    const currentBanners = await bannerRepository.getBanners();
+    const existingImageUrl = currentBanners?.[section]?.[field];
+    
+    // Delete previous image if it exists
+    if (existingImageUrl) {
+      await deleteImageFile(existingImageUrl);
+    }
+    
+    // Prepare update data with metadata
+    const updateData = {
+      [field]: imageUrl,
+      [`${field}Metadata`]: {
+        uploadedAt: new Date(),
+        filename: fileMetadata.filename || '',
+        originalName: fileMetadata.originalName || '',
+        size: fileMetadata.size || 0
+      }
+    };
+    
+    // Update with new image and metadata
+    const result = await bannerRepository.updateBannerFields(section, updateData);
+    
+    // Clear cache after data change
+    clearBannersCache();
+    
+    return result;
+  } catch (error) {
+    console.error('Error in uploadBannerImage:', error);
+    throw error;
+  }
+};
+
+const updateBannerAlt = async (section, alt) => {
+  const result = await bannerRepository.updateBannerField(section, 'alt', alt);
+  
+  // Clear cache after data change
+  clearBannersCache();
+  
+  return result;
+};
+
+// Enhanced delete function with better error handling
+const deleteBannerImage = async (section, field, oldImageUrl) => {
+  try {
+    // Delete the physical file first
+    if (oldImageUrl) {
+      await deleteImageFile(oldImageUrl);
+    }
+    
+    // Clear the database field
+    const result = await bannerRepository.deleteBannerField(section, field);
+    
+    // Clear cache after data change
+    clearBannersCache();
+    
+    return result;
+  } catch (error) {
+    console.error('Error in deleteBannerImage:', error);
+    throw error;
+  }
+};
+
+// Helper function to delete image files with enhanced path handling
+const deleteImageFile = async (imageUrl) => {
+  if (!imageUrl) return;
+  
+  try {
+    // Handle both relative and absolute URLs
+    let filePath;
+    
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      // Extract path from full URL
+      const url = new URL(imageUrl);
+      filePath = path.join(process.cwd(), url.pathname.replace(/^\//, ''));
+    } else if (imageUrl.startsWith('/')) {
+      // Handle absolute path from root
+      filePath = path.join(process.cwd(), imageUrl.replace(/^\//, ''));
+    } else {
+      // Handle relative path
+      filePath = path.join(process.cwd(), 'uploads', 'banners', imageUrl);
+    }
+    
+    // Check if file exists and delete it
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+      console.log(`Successfully deleted file: ${filePath}`);
+    } else {
+      console.log(`File not found, skipping deletion: ${filePath}`);
+    }
+  } catch (error) {
+    console.error('Error deleting image file:', error);
+    // Don't throw error - file deletion failure shouldn't stop the operation
+  }
 };
 
 module.exports = {
   getBanners,
-  addOrUpdateBanner,
+  uploadBannerImage,
+  updateBannerAlt,
   deleteBannerImage,
+  clearBannersCache, // Export cache clearing function
 };

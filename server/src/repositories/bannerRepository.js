@@ -1,82 +1,141 @@
 const Banner = require('../models/Banner');
-const fs = require('fs');
-const path = require('path');
 
 const getBanners = async () => {
-  return await Banner.findOne();
+  let banners = await Banner.findOne({ documentId: 'main-banners' });
+  
+  const requiredSections = [
+    'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+    'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+    'termsConditionsBanner', 'privacyPolicyBanner'
+  ];
+  
+  const defaultSection = { 
+    banner: '', 
+    mobilebanner: '', 
+    alt: '',
+    bannerMetadata: {
+      uploadedAt: null,
+      filename: '',
+      originalName: '',
+      size: 0
+    },
+    mobilebannerMetadata: {
+      uploadedAt: null,
+      filename: '',
+      originalName: '',
+      size: 0
+    }
+  };
+  
+  if (!banners) {
+    console.log('📋 Creating new banners document with all sections');
+    
+    const allSections = {};
+    requiredSections.forEach(section => {
+      allSections[section] = defaultSection;
+    });
+    
+    banners = new Banner({ 
+      documentId: 'main-banners',
+      ...allSections
+    });
+    
+    await banners.save();
+    console.log('✅ Created new banner document');
+  } else {
+    console.log('📋 Checking existing banners document');
+    
+    let needsUpdate = false;
+    
+    requiredSections.forEach(section => {
+      if (!banners[section] || Object.keys(banners[section]).length === 0) {
+        console.log(`➕ Adding missing section: ${section}`);
+        banners[section] = defaultSection;
+        // Mark the field as modified for Mongoose to save it
+        banners.markModified(section);
+        needsUpdate = true;
+      }
+    });
+    
+    if (needsUpdate) {
+      await banners.save();
+      console.log('✅ Updated banner document with missing sections');
+    }
+  }
+  
+  // Fetch fresh data after save to ensure consistency
+  banners = await Banner.findOne({ documentId: 'main-banners' }).lean();
+  
+  console.log('📋 Final banner data:', {
+    documentId: banners.documentId,
+    sections: requiredSections.map(s => ({
+      name: s,
+      exists: !!banners[s],
+      hasData: banners[s]?.banner || banners[s]?.mobilebanner ? true : false
+    }))
+  });
+  
+  return banners;
 };
 
-const addOrUpdateBanner = async (type, files, body) => {
-  const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
-  let banners = await Banner.findOne();
-  if (!banners) banners = new Banner({});
-  if (['sidebar'].includes(type)) {
-    const key = body.key;
-    if (!banners.sidebar[key]) banners.sidebar[key] = [];
-    files.forEach(file => {
-      // store full path under uploads in the URL so nested folders are preserved
-      const filePath = file && file.path ? file.path.replace(/\\/g, '/') : '';
-      const imageUrl = filePath ? `${baseUrl}/${filePath}` : '';
-      banners.sidebar[key].push({ image: imageUrl, alt: body.alt });
-    });
-  } else {
-    if (!banners[type]) banners[type] = [];
-    files.forEach(file => {
-      const filePath = file && file.path ? file.path.replace(/\\/g, '/') : '';
-      const imageUrl = filePath ? `${baseUrl}/${filePath}` : '';
-      banners[type].push({ image: imageUrl, alt: body.alt });
-    });
+const updateBannerField = async (section, field, value) => {
+  let banners = await Banner.findOne({ documentId: 'main-banners' });
+  if (!banners) {
+    banners = new Banner({ documentId: 'main-banners' });
   }
+  
+  if (!banners[section]) {
+    banners[section] = {};
+  }
+  
+  banners[section][field] = value;
   await banners.save();
   return banners;
 };
 
-const deleteBannerImage = async (type, key, index) => {
-  let banners = await Banner.findOne();
-  if (!banners) return null;
-  let imagePath;
-  if (type === 'sidebar') {
-    // key = category, index = index
-    if (banners.sidebar[key] && banners.sidebar[key][index]) {
-      imagePath = banners.sidebar[key][index].image;
-      banners.sidebar[key].splice(index, 1);
-    }
-  } else {
-    // For non-sidebar, support arrays of images. key may be undefined and index may be in key position.
-    let idx = undefined;
-    if (typeof index !== 'undefined') {
-      idx = Number(index);
-    } else if (typeof key !== 'undefined' && !isNaN(Number(key))) {
-      idx = Number(key);
-    }
-    if (Array.isArray(banners[type]) && typeof idx === 'number') {
-      if (banners[type][idx]) {
-        imagePath = banners[type][idx].image;
-        banners[type].splice(idx, 1);
-      }
-    }
+// New method to update multiple fields at once
+const updateBannerFields = async (section, fieldsData) => {
+  let banners = await Banner.findOne({ documentId: 'main-banners' });
+  if (!banners) {
+    banners = new Banner({ documentId: 'main-banners' });
   }
-  if (imagePath) {
-    // imagePath expected to be full URL like http://host/uploads/..., find the /uploads/ segment
-    try {
-      let rel = imagePath;
-      const uploadsIdx = imagePath.indexOf('/uploads/');
-      if (uploadsIdx !== -1) {
-        rel = imagePath.substring(uploadsIdx + 1); // remove leading slash
-      }
-      // join with server root upload dir (uploads/...)
-      const filePath = path.join(process.cwd(), rel.replace(/\//g, path.sep));
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    } catch (err) {
-      console.error('Error deleting file from disk', err);
-    }
+  
+  if (!banners[section]) {
+    banners[section] = {};
   }
+  
+  // Update multiple fields
+  Object.keys(fieldsData).forEach(field => {
+    banners[section][field] = fieldsData[field];
+  });
+  
   await banners.save();
+  return banners;
+};
+
+const deleteBannerField = async (section, field) => {
+  let banners = await Banner.findOne({ documentId: 'main-banners' });
+  if (!banners) return null;
+  
+  if (banners[section]) {
+    banners[section][field] = '';
+    // Also clear metadata when deleting image
+    if (field === 'banner' || field === 'mobilebanner') {
+      banners[section][`${field}Metadata`] = {
+        uploadedAt: null,
+        filename: '',
+        originalName: '',
+        size: 0
+      };
+    }
+    await banners.save();
+  }
   return banners;
 };
 
 module.exports = {
   getBanners,
-  addOrUpdateBanner,
-  deleteBannerImage,
+  updateBannerField,
+  updateBannerFields,
+  deleteBannerField,
 };

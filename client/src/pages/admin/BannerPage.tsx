@@ -1,690 +1,770 @@
-import React, { useState, useEffect } from 'react';
-import { Upload, Trash2, Loader2, Plus, Save, Eye, X } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Upload, Trash2, Loader2, Save, Eye, X, AlertCircle } from 'lucide-react';
+import { getBanners, uploadBannerImage, updateBannerAlt, deleteBannerImage, getImageUrl, formatFileSize, formatUploadDate } from '../../api';
+import { SuccessModal, type SuccessModalProps } from '../../components/modals';
 
-type BannerSectionType = {
+
+
+// Lazy Image Component for better performance
+interface LazyImageProps {
+  src: string;
+  alt: string;
+  className?: string;
+  onLoad?: () => void;
+  onError?: (e: React.SyntheticEvent<HTMLImageElement, Event>) => void;
+  fallbackSrc?: string;
+}
+
+const LazyImage: React.FC<LazyImageProps> = React.memo(({ 
+  src, 
+  alt, 
+  className, 
+  onLoad, 
+  onError, 
+  fallbackSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg=='
+}) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [imageRef, setImageRef] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    if (!imageRef || !src) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsLoaded(true);
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    observer.observe(imageRef);
+
+    return () => observer.disconnect();
+  }, [imageRef, src]);
+
+  const handleError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+    const target = e.currentTarget;
+    target.src = fallbackSrc;
+    onError?.(e);
+  };
+
+  return (
+    <img
+      ref={setImageRef}
+      src={isLoaded ? src : fallbackSrc}
+      alt={alt}
+      className={className}
+      onLoad={() => {
+        setIsLoaded(true);
+        onLoad?.();
+      }}
+      onError={handleError}
+      loading="lazy"
+    />
+  );
+});
+
+// Banner section type matching the database structure
+interface BannerSectionData {
   banner: string;
   mobilebanner: string;
   alt: string;
-};
-type SidebarItem = { image: string; alt: string };
-type BannersType = {
-  homepageBanner: BannerSectionType;
-  aboutUs: BannerSectionType;
-  commercialBanner: BannerSectionType;
-  plotBanner: BannerSectionType;
-  residentialBanner: BannerSectionType;
-  contactBanners: BannerSectionType;
-  careerBanner: BannerSectionType;
-  ourTeamBanner: BannerSectionType;
-  termsConditionsBanner: BannerSectionType;
-  privacyPolicyBanner: BannerSectionType;
-  sidebar: {
-    commercial: SidebarItem[];
-    residential: SidebarItem[];
-    plots: SidebarItem[];
+  bannerMetadata?: {
+    uploadedAt?: string | null;
+    filename?: string;
+    originalName?: string;
+    size?: number;
   };
-};
+  mobilebannerMetadata?: {
+    uploadedAt?: string | null;
+    filename?: string;
+    originalName?: string;
+    size?: number;
+  };
+}
 
-const BannerManagement = () => {
-  const [banners, setBanners] = useState<BannersType>({
-    homepageBanner: { banner: '', mobilebanner: '', alt: '' },
-    aboutUs: { banner: '', mobilebanner: '', alt: '' },
-    commercialBanner: { banner: '', mobilebanner: '', alt: '' },
-    plotBanner: { banner: '', mobilebanner: '', alt: '' },
-    residentialBanner: { banner: '', mobilebanner: '', alt: '' },
-    contactBanners: { banner: '', mobilebanner: '', alt: '' },
-    careerBanner: { banner: '', mobilebanner: '', alt: '' },
-    ourTeamBanner: { banner: '', mobilebanner: '', alt: '' },
-    termsConditionsBanner: { banner: '', mobilebanner: '', alt: '' },
-    privacyPolicyBanner: { banner: '', mobilebanner: '', alt: '' },
-    sidebar: {
-      commercial: [],
-      residential: [],
-      plots: []
-    }
+interface BannersData {
+  homepageBanner: BannerSectionData;
+  aboutUs: BannerSectionData;
+  commercialBanner: BannerSectionData;
+  plotBanner: BannerSectionData;
+  residentialBanner: BannerSectionData;
+  contactBanners: BannerSectionData;
+  careerBanner: BannerSectionData;
+  ourTeamBanner: BannerSectionData;
+  termsConditionsBanner: BannerSectionData;
+  privacyPolicyBanner: BannerSectionData;
+}
+
+// Available banner sections
+const BANNER_SECTIONS = [
+  { key: 'homepageBanner', label: 'Homepage Banner' },
+  { key: 'aboutUs', label: 'About Us Banner' },
+  { key: 'commercialBanner', label: 'Commercial Banner' },
+  { key: 'plotBanner', label: 'Plot Banner' },
+  { key: 'residentialBanner', label: 'Residential Banner' },
+  { key: 'contactBanners', label: 'Contact Banner' },
+  { key: 'careerBanner', label: 'Career Banner' },
+  { key: 'ourTeamBanner', label: 'Our Team Banner' },
+  { key: 'termsConditionsBanner', label: 'Terms & Conditions Banner' },
+  { key: 'privacyPolicyBanner', label: 'Privacy Policy Banner' },
+];
+
+const BannerManagement: React.FC = () => {
+  const [banners, setBanners] = useState<Partial<BannersData>>({});
+  const [localAltTexts, setLocalAltTexts] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
+  const [previewModal, setPreviewModal] = useState<{ show: boolean; image: string; alt: string }>({ 
+    show: false, 
+    image: '', 
+    alt: '' 
   });
 
-  const [loading, setLoading] = useState<Record<string, boolean>>({});
-  const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [activeTab, setActiveTab] = useState<string>('page-banners');
-  const [previewModal, setPreviewModal] = useState<{ show: boolean; image: string; alt: string }>({ show: false, image: '', alt: '' });
+  // Note: Debouncing available via useDebounce hook if needed for future enhancements
+  
+  // Success Modal State
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    details?: SuccessModalProps['details'];
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    details: undefined
+  });
 
-  // Load existing banners from API
-  useEffect(() => {
-    fetchBanners();
+  // Memoized computed values for performance optimization
+  const memoizedImageUrls = useMemo(() => {
+    const urls: Record<string, { desktop: string; mobile: string }> = {};
+    BANNER_SECTIONS.forEach(({ key }) => {
+      const sectionData = banners[key as keyof BannersData];
+      urls[key] = {
+        desktop: sectionData?.banner ? getImageUrl(sectionData.banner) : '',
+        mobile: sectionData?.mobilebanner ? getImageUrl(sectionData.mobilebanner) : ''
+      };
+    });
+    return urls;
+  }, [banners]);
+
+  // Memoized loading states for better performance
+  const loadingStates = useMemo(() => ({
+    isAnyUploading: BANNER_SECTIONS.some(({ key }) => 
+      loading === `upload-${key}-banner` || loading === `upload-${key}-mobilebanner`
+    ),
+    isAnyDeleting: BANNER_SECTIONS.some(({ key }) => 
+      loading === `delete-${key}-banner` || loading === `delete-${key}-mobilebanner`
+    ),
+    isAnyAltUpdating: BANNER_SECTIONS.some(({ key }) => 
+      loading === `alt-${key}`
+    )
+  }), [loading]);
+
+  // Show success modal with details
+  // Show success modal - Optimized with useCallback
+  const showSuccessModal = useCallback((title: string, message: string, details?: SuccessModalProps['details']) => {
+    setSuccessModal({
+      isOpen: true,
+      title,
+      message,
+      details
+    });
   }, []);
 
-  const fetchBanners = async () => {
+  // Close success modal - Optimized with useCallback
+  const closeSuccessModal = useCallback(() => {
+    setSuccessModal({
+      isOpen: false,
+      title: '',
+      message: '',
+      details: undefined
+    });
+  }, []);
+
+  // Fetch all banners with enhanced error handling
+  const fetchBanners = useCallback(async (retryCount = 0) => {
+    setLoading('fetch-all');
+    setError('');
     try {
-      // Replace with your actual API endpoint
-      const response = await fetch('/api/banners');
-      if (response.ok) {
-        const data = await response.json();
-        setBanners(data);
+      console.log('🔄 Fetching banners from API...');
+      const response = await getBanners();
+      
+      if (response.success && response.data) {
+        console.log('📋 API Response received:', {
+          success: response.success,
+          hasData: !!response.data,
+          dataKeys: Object.keys(response.data),
+          dataStructure: {
+            _id: response.data._id,
+            documentId: response.data.documentId,
+            totalSections: Object.keys(response.data).filter(key => 
+              key.includes('Banner') || key === 'aboutUs' || key === 'contactBanners'
+            ).length
+          }
+        });
+        
+        // Log complete banner data for debugging
+        console.log('📋 Complete banner data received:', response.data);
+        
+        setBanners(response.data);
+        setError(''); // Clear any previous errors
+        
+        // Log successful data load
+        console.log('✅ Banner data successfully loaded into state');
+      } else {
+        throw new Error(response.error || 'Failed to fetch banners');
       }
-    } catch (error) {
-      console.error('Error fetching banners:', error);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('❌ Failed to load banners:', errorMessage);
+      
+      // Retry mechanism for network issues
+      if (retryCount < 2) {
+        console.log(`🔄 Retrying... (${retryCount + 1}/2)`);
+        setTimeout(() => fetchBanners(retryCount + 1), 1000);
+        return;
+      }
+      
+      setError(`Failed to load banners: ${errorMessage}`);
+    } finally {
+      setLoading('');
+    }
+  }, []); // Empty dependency array since this function doesn't depend on any state
+
+  // Load existing banners from API on component mount
+  useEffect(() => {
+    fetchBanners();
+  }, [fetchBanners]);
+
+  // Debug effect to log banners state changes
+  useEffect(() => {
+    if (Object.keys(banners).length > 0) {
+      // Define all expected sections
+      const expectedSections = [
+        'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+        'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+        'termsConditionsBanner', 'privacyPolicyBanner'
+      ];
+      
+      const availableSections = expectedSections.filter(section => banners[section as keyof BannersData]);
+      const missingSections = expectedSections.filter(section => !banners[section as keyof BannersData]);
+      
+      console.log('🏠 Banners state updated:', {
+        expectedSections: expectedSections.length,
+        availableSections: availableSections.length,
+        missingSections: missingSections.length,
+        availableSectionsList: availableSections,
+        missingSectionsList: missingSections.length > 0 ? missingSections : 'none',
+        allSectionsPresent: availableSections.length === expectedSections.length,
+        sampleSection: banners.homepageBanner ? {
+          hasDesktop: !!banners.homepageBanner.banner,
+          hasMobile: !!banners.homepageBanner.mobilebanner,
+          hasAlt: !!banners.homepageBanner.alt,
+          hasDesktopMetadata: !!banners.homepageBanner.bannerMetadata,
+          hasMobileMetadata: !!banners.homepageBanner.mobilebannerMetadata
+        } : 'No homepage banner data',
+        rawDataKeys: Object.keys(banners)
+      });
+    }
+  }, [banners]);
+
+
+
+  // Upload image for a specific section and field
+  // Handle image upload - Optimized with useCallback
+  const handleImageUpload = useCallback(async (section: string, field: 'banner' | 'mobilebanner', file: File) => {
+    setLoading(`upload-${section}-${field}`);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const altText = banners[section as keyof BannersData]?.alt || '';
+      const response = await uploadBannerImage(section, field, file, altText);
+      
+      if (response.success) {
+        // Update local state directly instead of fetching all data (prevents 429 errors)
+        setBanners(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section as keyof BannersData],
+            [field]: (response.data as { imageUrl?: string; filename?: string })?.imageUrl || 
+                     (response.data as { imageUrl?: string; filename?: string })?.filename || '',
+            [`${field}Metadata`]: (response.data as { metadata?: unknown })?.metadata
+          }
+        }));
+        
+        // Show enhanced success modal with details
+        showSuccessModal(
+          'Upload Successful!',
+          response.message || 'Image uploaded successfully',
+          {
+            section: (response.data as { section?: string })?.section,
+            field: (response.data as { field?: string })?.field,
+            imageUrl: (response.data as { imageUrl?: string })?.imageUrl,
+            metadata: (response.data as { metadata?: { originalName?: string; size?: number; filename?: string } })?.metadata
+          }
+        );
+      } else {
+        setError(response.error || 'Upload failed');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Upload failed: ${errorMessage}`);
+    } finally {
+      setLoading('');
+    }
+  }, [banners, showSuccessModal]);
+
+  // Update alt text for a section
+  const handleAltUpdate = async (section: string, alt: string) => {
+    setLoading(`alt-${section}`);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const response = await updateBannerAlt(section, alt);
+      
+      if (response.success) {
+        // Update local state directly instead of fetching all data (prevents 429 errors)
+        setBanners(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section as keyof BannersData],
+            alt: alt
+          }
+        }));
+        
+        // Clear local state after successful update
+        setLocalAltTexts(prev => {
+          const newState = { ...prev };
+          delete newState[section];
+          return newState;
+        });
+        
+        // Show success modal with details
+        showSuccessModal(
+          'Alt Text Updated!',
+          response.message || 'Alt text updated successfully',
+          {
+            section: (response.data as { section?: string })?.section,
+            field: 'alt'
+          }
+        );
+      } else {
+        setError(response.error || 'Update failed');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Update failed: ${errorMessage}`);
+    } finally {
+      setLoading('');
     }
   };
 
-  // Preview Modal
+  // Delete image for a specific section and field
+  const handleImageDelete = async (section: string, field: 'banner' | 'mobilebanner') => {
+    if (!window.confirm('Are you sure you want to delete this image?')) return;
+    
+    setLoading(`delete-${section}-${field}`);
+    setError('');
+    setSuccess('');
+    
+    try {
+      const response = await deleteBannerImage(section, field);
+      
+      if (response.success) {
+        // Update local state directly instead of fetching all data (prevents 429 errors)
+        setBanners(prev => ({
+          ...prev,
+          [section]: {
+            ...prev[section as keyof BannersData],
+            [field]: '',
+            [`${field}Metadata`]: undefined
+          }
+        }));
+        
+        // Show success modal with details
+        showSuccessModal(
+          'Image Deleted!',
+          response.message || 'Image deleted successfully',
+          {
+            section: (response.data as { section?: string })?.section,
+            field: (response.data as { field?: string })?.field
+          }
+        );
+      } else {
+        setError(response.error || 'Delete failed');
+      }
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Delete failed: ${errorMessage}`);
+    } finally {
+      setLoading('');
+    }
+  };
+
+  // Show preview modal
   const showPreview = (image: string, alt: string) => {
     setPreviewModal({ show: true, image, alt });
   };
 
-  // Handle single image upload
-  const handleImageUpload = async (section: keyof BannersType, field: keyof BannerSectionType, file: File) => {
-    // Only allow BannerSectionType keys
-    if (section === 'sidebar') return;
-    if (!file) return;
-
-    const loadingKey = `${section}-${field}`;
-  setLoading((prev) => ({ ...prev, [loadingKey]: true }));
-
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('section', section);
-      formData.append('field', field);
-
-      // Get old image URL for deletion
-      const oldImageUrl = banners[section][field];
-      if (oldImageUrl) {
-        formData.append('oldImageUrl', oldImageUrl);
-      }
-
-      // Replace with your actual upload API endpoint
-      const response = await fetch('/api/banners/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-  setBanners((prev) => ({
-          ...prev,
-          [section]: {
-            ...prev[section],
-            [field]: data.imageUrl
-          }
-        }));
-
-        alert('Image uploaded successfully!');
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Error uploading image. Please try again.');
-    } finally {
-  setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-    }
+  // Close preview modal
+  const closePreview = () => {
+    setPreviewModal({ show: false, image: '', alt: '' });
   };
 
-  // Handle single image delete
-  const handleImageDelete = async (section: keyof BannersType, field: keyof BannerSectionType) => {
-    if (section === 'sidebar') return;
-    if (!confirm('Are you sure you want to delete this image?')) return;
-
-    const imageUrl = banners[section][field];
-    const loadingKey = `${section}-${field}-delete`;
-  setLoading((prev) => ({ ...prev, [loadingKey]: true }));
-
-    try {
-      // Replace with your actual delete API endpoint
-      const response = await fetch('/api/banners/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          section, 
-          field, 
-          imageUrl 
-        })
-      });
-
-      if (response.ok) {
-  setBanners((prev) => ({
-          ...prev,
-          [section]: {
-            ...prev[section],
-            [field]: ''
-          }
-        }));
-
-        alert('Image deleted successfully!');
-      }
-    } catch (error) {
-      console.error('Error deleting image:', error);
-      alert('Error deleting image. Please try again.');
-    } finally {
-  setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-    }
-  };
-
-  // Handle alt text change (local state)
-  const handleAltTextChange = (section: keyof BannersType, value: string) => {
-    if (section === 'sidebar') return;
-  setBanners((prev) => ({
+  // Handle alt text change locally (no API call) - Optimized with useCallback
+  const handleAltTextChange = useCallback((section: string, value: string) => {
+    setLocalAltTexts(prev => ({
       ...prev,
-      [section]: {
-        ...prev[section],
-        alt: value
-      }
+      [section]: value
     }));
+  }, []);
+
+  // Get alt text for display (local first, then from banners)
+  const getAltText = (section: string): string => {
+    return localAltTexts[section] ?? banners[section as keyof BannersData]?.alt ?? '';
   };
 
-  // Save alt text to database
-  const saveAltText = async (section: keyof BannersType) => {
-    if (section === 'sidebar') return;
-    const savingKey = `${section}-alt`;
-  setSaving((prev) => ({ ...prev, [savingKey]: true }));
+  // Check if alt text has unsaved changes
+  const hasUnsavedAltChanges = (section: string): boolean => {
+    const localAlt = localAltTexts[section];
+    const serverAlt = banners[section as keyof BannersData]?.alt ?? '';
+    return localAlt !== undefined && localAlt !== serverAlt;
+  };
 
-    try {
-      const response = await fetch('/api/banners/update-alt', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          section, 
-          alt: banners[section].alt 
-        })
-      });
-
-      if (response.ok) {
-        alert('Alt text saved successfully!');
-      }
-    } catch (error) {
-      console.error('Error saving alt text:', error);
-      alert('Error saving alt text.');
-    } finally {
-  setSaving((prev) => ({ ...prev, [savingKey]: false }));
+  // Handle file input change
+  // Handle file selection - Optimized with useCallback
+  const handleFileChange = useCallback((section: string, field: 'banner' | 'mobilebanner', event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      handleImageUpload(section, field, file);
     }
-  };
-
-  // Sidebar functions
-  const handleSidebarUpload = async (category: keyof BannersType['sidebar'], file: File) => {
-    if (!file) return;
-
-    const loadingKey = `sidebar-${category}`;
-  setLoading((prev) => ({ ...prev, [loadingKey]: true }));
-
-    try {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('category', category);
-
-      const response = await fetch('/api/banners/sidebar/upload', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        
-  setBanners((prev) => ({
-          ...prev,
-          sidebar: {
-            ...prev.sidebar,
-            [category]: [...prev.sidebar[category], { image: data.imageUrl, alt: '' }]
-          }
-        }));
-
-        alert('Sidebar image uploaded successfully!');
-      }
-    } catch (error) {
-      console.error('Error uploading sidebar image:', error);
-      alert('Error uploading image. Please try again.');
-    } finally {
-  setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-    }
-  };
-
-  const handleSidebarDelete = async (category: keyof BannersType['sidebar'], index: number) => {
-    if (!confirm('Are you sure you want to delete this image?')) return;
-
-    const imageUrl = banners.sidebar[category][index].image;
-    const loadingKey = `sidebar-${category}-${index}-delete`;
-  setLoading((prev) => ({ ...prev, [loadingKey]: true }));
-
-    try {
-      const response = await fetch('/api/banners/sidebar/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          category, 
-          index,
-          imageUrl 
-        })
-      });
-
-      if (response.ok) {
-  setBanners((prev) => ({
-          ...prev,
-          sidebar: {
-            ...prev.sidebar,
-            [category]: prev.sidebar[category].filter((_, i) => i !== index)
-          }
-        }));
-
-        alert('Sidebar image deleted successfully!');
-      }
-    } catch (error) {
-      console.error('Error deleting sidebar image:', error);
-      alert('Error deleting image. Please try again.');
-    } finally {
-  setLoading((prev) => ({ ...prev, [loadingKey]: false }));
-    }
-  };
-
-  const handleSidebarAltChange = (category: keyof BannersType['sidebar'], index: number, value: string) => {
-  setBanners((prev) => ({
-      ...prev,
-      sidebar: {
-        ...prev.sidebar,
-        [category]: prev.sidebar[category].map((item, i) => 
-          i === index ? { ...item, alt: value } : item
-        )
-      }
-    }));
-  };
-
-  const saveSidebarAlt = async (category: keyof BannersType['sidebar'], index: number) => {
-    const savingKey = `sidebar-${category}-${index}-alt`;
-  setSaving((prev) => ({ ...prev, [savingKey]: true }));
-
-    try {
-      const response = await fetch('/api/banners/sidebar/update-alt', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          category, 
-          index,
-          alt: banners.sidebar[category][index].alt 
-        })
-      });
-
-      if (response.ok) {
-        alert('Alt text saved successfully!');
-      }
-    } catch (error) {
-      console.error('Error saving alt text:', error);
-      alert('Error saving alt text.');
-    } finally {
-  setSaving((prev) => ({ ...prev, [savingKey]: false }));
-    }
-  };
-
-  // Banner Section Component
-  const BannerSection = ({ title, section }: { title: string; section: keyof BannersType }) => {
-    if (section === 'sidebar') return null;
-    const bannerSection = banners[section] as BannerSectionType;
-    return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-        <div className="w-1 h-6 bg-blue-600 rounded"></div>
-        {title}
-      </h3>
-      
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Desktop Banner */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            Desktop Banner
-          </label>
-          
-          {bannerSection.banner ? (
-            <div className="space-y-2">
-              <div className="relative group">
-                <img 
-                  src={bannerSection.banner}
-                  alt={bannerSection.alt || 'Banner'}
-                  className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                  <button
-                    onClick={() => showPreview(bannerSection.banner, bannerSection.alt)}
-                    className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleImageDelete(section, 'banner')}
-                    disabled={loading[`${section}-banner-delete`]}
-                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {loading[`${section}-banner-delete`] ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              
-              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleImageUpload(section, 'banner', e.target.files[0]);
-                    }
-                  }}
-                  className="hidden"
-                />
-                <Upload className="w-4 h-4" />
-                <span className="text-sm font-medium">Change Image</span>
-              </label>
-            </div>
-          ) : (
-            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleImageUpload(section, 'banner', e.target.files[0]);
-                  }
-                }}
-                className="hidden"
-              />
-              {loading[`${section}-banner`] ? (
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-              ) : (
-                <>
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500 font-medium">Upload Desktop Banner</span>
-                  <span className="text-xs text-gray-400 mt-1">Click to browse</span>
-                </>
-              )}
-            </label>
-          )}
-        </div>
-
-        {/* Mobile Banner */}
-        <div className="space-y-3">
-          <label className="block text-sm font-medium text-gray-700">
-            Mobile Banner
-          </label>
-          
-          {bannerSection.mobilebanner ? (
-            <div className="space-y-2">
-              <div className="relative group">
-                <img 
-                  src={bannerSection.mobilebanner}
-                  alt={bannerSection.alt || 'Mobile Banner'}
-                  className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
-                />
-                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                  <button
-                    onClick={() => showPreview(bannerSection.mobilebanner, bannerSection.alt)}
-                    className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
-                  >
-                    <Eye className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => handleImageDelete(section, 'mobilebanner')}
-                    disabled={loading[`${section}-mobilebanner-delete`]}
-                    className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                  >
-                    {loading[`${section}-mobilebanner-delete`] ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Trash2 className="w-5 h-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-              
-              <label className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors">
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleImageUpload(section, 'mobilebanner', e.target.files[0]);
-                    }
-                  }}
-                  className="hidden"
-                />
-                <Upload className="w-4 h-4" />
-                <span className="text-sm font-medium">Change Image</span>
-              </label>
-            </div>
-          ) : (
-            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleImageUpload(section, 'mobilebanner', e.target.files[0]);
-                  }
-                }}
-                className="hidden"
-              />
-              {loading[`${section}-mobilebanner`] ? (
-                <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-              ) : (
-                <>
-                  <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                  <span className="text-sm text-gray-500 font-medium">Upload Mobile Banner</span>
-                  <span className="text-xs text-gray-400 mt-1">Click to browse</span>
-                </>
-              )}
-            </label>
-          )}
-        </div>
-      </div>
-
-      {/* Alt Text with Save Button */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Alt Text (for SEO and Accessibility)
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={bannerSection.alt}
-            onChange={(e) => handleAltTextChange(section, e.target.value)}
-            placeholder="Enter descriptive alt text for this banner"
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
-          <button
-            onClick={() => saveAltText(section)}
-            disabled={saving[`${section}-alt`]}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            {saving[`${section}-alt`] ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save className="w-4 h-4" />
-                Save
-              </>
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-    );
-  };
-
-  // Sidebar Section Component
-  const SidebarSection = ({ category, title }: { category: keyof BannersType['sidebar']; title: string }) => (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800 flex items-center gap-2">
-        <div className="w-1 h-6 bg-green-600 rounded"></div>
-        {title}
-      </h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {banners.sidebar[category].map((item, index) => (
-          <div key={index} className="space-y-3 p-4 border border-gray-200 rounded-lg hover:border-blue-300 transition-colors">
-            <div className="relative group">
-              <img 
-                src={item.image} 
-                alt={item.alt || `Sidebar image ${index + 1}`}
-                className="w-full h-40 object-cover rounded-lg border border-gray-200"
-              />
-              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
-                <button
-                  onClick={() => showPreview(item.image, item.alt)}
-                  className="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-600 transition-colors"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleSidebarDelete(category, index)}
-                  disabled={loading[`sidebar-${category}-${index}-delete`]}
-                  className="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-                >
-                  {loading[`sidebar-${category}-${index}-delete`] ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={item.alt}
-                onChange={(e) => handleSidebarAltChange(category, index, e.target.value)}
-                placeholder="Alt text"
-                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-              <button
-                onClick={() => saveSidebarAlt(category, index)}
-                disabled={saving[`sidebar-${category}-${index}-alt`]}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {saving[`sidebar-${category}-${index}-alt`] ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Save className="w-4 h-4" />
-                )}
-              </button>
-            </div>
-          </div>
-        ))}
-        
-        {/* Add New Button */}
-        <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-green-500 hover:bg-green-50 transition-colors">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => {
-              if (e.target.files && e.target.files[0]) {
-                handleSidebarUpload(category, e.target.files[0]);
-              }
-            }}
-            className="hidden"
-          />
-          {loading[`sidebar-${category}`] ? (
-            <Loader2 className="w-8 h-8 text-green-500 animate-spin" />
-          ) : (
-            <>
-              <Plus className="w-10 h-10 text-gray-400 mb-2" />
-              <span className="text-sm text-gray-500 font-medium">Add New Image</span>
-              <span className="text-xs text-gray-400 mt-1">Click to upload</span>
-            </>
-          )}
-        </label>
-      </div>
-    </div>
-  );
+  }, [handleImageUpload]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg p-8 mb-6 text-white">
-          <h1 className="text-4xl font-bold mb-2">Banner Management System</h1>
-          <p className="text-blue-100">Upload, manage, and organize all website banners with ease</p>
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
+      {/* Header */}
+      <div className="bg-white rounded-xl shadow-lg p-8 mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold text-gray-800">Banner Management</h1>
+          {/* Global Loading Indicator */}
+          {(loadingStates.isAnyUploading || loadingStates.isAnyDeleting || loadingStates.isAnyAltUpdating || loading === 'fetch-all') && (
+            <div className="flex items-center gap-2 text-blue-600">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <span className="text-sm font-medium">
+                {loading === 'fetch-all' ? 'Loading banners...' :
+                 loadingStates.isAnyUploading ? 'Uploading...' :
+                 loadingStates.isAnyDeleting ? 'Deleting...' :
+                 loadingStates.isAnyAltUpdating ? 'Updating alt text...' : 'Processing...'}
+              </span>
+            </div>
+          )}
         </div>
+        <p className="text-gray-600">
+          Manage banners across all sections of your website. Upload desktop and mobile versions, 
+          set alt text for accessibility, and preview changes.
+        </p>
+      </div>
 
-        {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('page-banners')}
-              className={`flex-1 px-6 py-4 font-semibold transition-all ${
-                activeTab === 'page-banners'
-                  ? 'text-blue-600 bg-blue-50 border-b-4 border-blue-600'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              📄 Page Banners
-            </button>
-            <button
-              onClick={() => setActiveTab('sidebar-banners')}
-              className={`flex-1 px-6 py-4 font-semibold transition-all ${
-                activeTab === 'sidebar-banners'
-                  ? 'text-green-600 bg-green-50 border-b-4 border-green-600'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              📌 Sidebar Banners
-            </button>
-          </div>
+      {/* Alert Messages */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+          <span className="text-red-700">{error}</span>
+          <button 
+            onClick={() => setError('')}
+            className="ml-auto text-red-500 hover:text-red-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
+      )}
 
-        {/* Page Banners Tab */}
-        {activeTab === 'page-banners' && (
-          <div>
-            <BannerSection title="Homepage Banner" section="homepageBanner" />
-            <BannerSection title="About Us Banner" section="aboutUs" />
-            <BannerSection title="Commercial Banner" section="commercialBanner" />
-            <BannerSection title="Plot Banner" section="plotBanner" />
-            <BannerSection title="Residential Banner" section="residentialBanner" />
-            <BannerSection title="Contact Banner" section="contactBanners" />
-            <BannerSection title="Career Banner" section="careerBanner" />
-            <BannerSection title="Our Team Banner" section="ourTeamBanner" />
-            <BannerSection title="Terms & Conditions Banner" section="termsConditionsBanner" />
-            <BannerSection title="Privacy Policy Banner" section="privacyPolicyBanner" />
-          </div>
-        )}
+      {success && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 flex items-center gap-3">
+          <div className="w-5 h-5 text-green-500 shrink-0">✓</div>
+          <span className="text-green-700">{success}</span>
+          <button 
+            onClick={() => setSuccess('')}
+            className="ml-auto text-green-500 hover:text-green-700"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
-        {/* Sidebar Banners Tab */}
-        {activeTab === 'sidebar-banners' && (
-          <div>
-            <SidebarSection category="commercial" title="Commercial Sidebar Banners" />
-            <SidebarSection category="residential" title="Residential Sidebar Banners" />
-            <SidebarSection category="plots" title="Plots Sidebar Banners" />
-          </div>
-        )}
+      {/* Banner Sections Grid */}
+      <div className="grid gap-8">
+        {BANNER_SECTIONS.map(({ key, label }) => {
+          const sectionData = banners[key as keyof BannersData];
+          
+          return (
+            <div key={key} className="bg-white rounded-xl shadow-lg p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">{label}</h2>
+              
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Desktop Banner */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-700">Desktop Banner</h3>
+                  
+                  {sectionData?.banner ? (
+                    <div className="relative group">
+                      <LazyImage 
+                        src={memoizedImageUrls[key]?.desktop || ''} 
+                        alt={sectionData.alt || 'Desktop banner'}
+                        className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        onLoad={() => {
+                          console.log('✅ Successfully loaded image:', memoizedImageUrls[key]?.desktop);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Failed to load image:', {
+                            originalPath: sectionData.banner,
+                            fullUrl: memoizedImageUrls[key]?.desktop,
+                            error: e
+                          });
+                        }}
+                      />
+                      
+                      {/* Image metadata overlay */}
+                      {sectionData.bannerMetadata && (
+                        <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {sectionData.bannerMetadata.size && 
+                            formatFileSize(sectionData.bannerMetadata.size)
+                          }
+                          {sectionData.bannerMetadata.uploadedAt && (
+                            <div>
+                              {formatUploadDate(sectionData.bannerMetadata.uploadedAt)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => showPreview(getImageUrl(sectionData.banner), sectionData.alt || '')}
+                            className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleImageDelete(key, 'banner')}
+                            disabled={loading === `delete-${key}-banner`}
+                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+                          >
+                            {loading === `delete-${key}-banner` ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">No desktop banner uploaded</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3">
+                    <label className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(key, 'banner', e)}
+                        className="hidden"
+                      />
+                      <span className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                        {loading === `upload-${key}-banner` ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        {sectionData?.banner ? 'Replace' : 'Upload'} Desktop
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Mobile Banner */}
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-gray-700">Mobile Banner</h3>
+                  
+                  {sectionData?.mobilebanner ? (
+                    <div className="relative group">
+                      <LazyImage 
+                        src={memoizedImageUrls[key]?.mobile || ''} 
+                        alt={sectionData.alt || 'Mobile banner'}
+                        className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        onLoad={() => {
+                          console.log('✅ Successfully loaded mobile image:', memoizedImageUrls[key]?.mobile);
+                        }}
+                        onError={(e) => {
+                          console.error('❌ Failed to load mobile image:', {
+                            originalPath: sectionData.mobilebanner,
+                            fullUrl: memoizedImageUrls[key]?.mobile,
+                            error: e
+                          });
+                        }}
+                      />
+                      
+                      {/* Image metadata overlay */}
+                      {sectionData.mobilebannerMetadata && (
+                        <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                          {sectionData.mobilebannerMetadata.size && 
+                            formatFileSize(sectionData.mobilebannerMetadata.size)
+                          }
+                          {sectionData.mobilebannerMetadata.uploadedAt && (
+                            <div>
+                              {formatUploadDate(sectionData.mobilebannerMetadata.uploadedAt)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={() => showPreview(getImageUrl(sectionData.mobilebanner), sectionData.alt || '')}
+                            className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                          >
+                            <Eye className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleImageDelete(key, 'mobilebanner')}
+                            disabled={loading === `delete-${key}-mobilebanner`}
+                            className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+                          >
+                            {loading === `delete-${key}-mobilebanner` ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-5 h-5" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                      <div className="text-center">
+                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                        <p className="text-gray-500">No mobile banner uploaded</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-3">
+                    <label className="flex-1">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => handleFileChange(key, 'mobilebanner', e)}
+                        className="hidden"
+                      />
+                      <span className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                        {loading === `upload-${key}-mobilebanner` ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Upload className="w-4 h-4" />
+                        )}
+                        {sectionData?.mobilebanner ? 'Replace' : 'Upload'} Mobile
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alt Text Section */}
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h3 className="text-lg font-medium text-gray-700 mb-4">
+                  Alt Text (for accessibility)
+                  {hasUnsavedAltChanges(key) && (
+                    <span className="ml-2 text-sm text-orange-600 font-normal">• Unsaved changes</span>
+                  )}
+                </h3>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={getAltText(key)}
+                    onChange={(e) => handleAltTextChange(key, e.target.value)}
+                    placeholder="Enter descriptive alt text for screen readers..."
+                    className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      hasUnsavedAltChanges(key) 
+                        ? 'border-orange-300 bg-orange-50' 
+                        : 'border-gray-300'
+                    }`}
+                  />
+                  <button
+                    onClick={() => {
+                      const altText = getAltText(key);
+                      handleAltUpdate(key, altText);
+                    }}
+                    disabled={loading === `alt-${key}` || !getAltText(key) || !hasUnsavedAltChanges(key)}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    {loading === `alt-${key}` ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    Save Alt Text
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {/* Preview Modal */}
       {previewModal.show && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
-          onClick={() => setPreviewModal({ show: false, image: '', alt: '' })}
-        >
-          <div className="relative max-w-5xl max-h-[90vh] bg-white rounded-xl overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <button
-              onClick={() => setPreviewModal({ show: false, image: '', alt: '' })}
-              className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors z-10"
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <img 
-              src={previewModal.image} 
-              alt={previewModal.alt || 'Preview'}
-              className="w-full h-auto max-h-[85vh] object-contain"
-            />
-            {previewModal.alt && (
-              <div className="p-4 bg-gray-50 border-t border-gray-200">
-                <p className="text-sm text-gray-600"><strong>Alt Text:</strong> {previewModal.alt}</p>
-              </div>
-            )}
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-4xl max-h-full overflow-auto">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold">Image Preview</h3>
+              <button
+                onClick={closePreview}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="p-4">
+              <img
+                src={previewModal.image}
+                alt={previewModal.alt}
+                className="max-w-full max-h-96 object-contain mx-auto"
+              />
+              {previewModal.alt && (
+                <p className="mt-4 text-gray-600 text-center">
+                  <strong>Alt Text:</strong> {previewModal.alt}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={successModal.isOpen}
+        onClose={closeSuccessModal}
+        title={successModal.title}
+        message={successModal.message}
+        details={successModal.details}
+      />
     </div>
   );
 };

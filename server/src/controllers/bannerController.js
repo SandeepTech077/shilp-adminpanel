@@ -1,32 +1,180 @@
 const bannerService = require('../services/bannerService');
+const path = require('path');
+const fs = require('fs');
 
 exports.getBanners = async (req, res) => {
   try {
     const banners = await bannerService.getBanners();
-    res.json(banners);
+    
+    // Add caching headers
+    res.set({
+      'Cache-Control': 'private, max-age=30',
+      'ETag': `"${banners._id}-${banners.updatedAt?.getTime()}"`
+    });
+    
+    res.json({ 
+      success: true, 
+      data: banners 
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('❌ Error fetching banners:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch banners',
+      details: process.env.NODE_ENV === 'development' ? err.message : undefined
+    });
   }
 };
 
-exports.addOrUpdateBanner = async (req, res) => {
-  const { type } = req.params;
-  const files = req.files || (req.file ? [req.file] : []);
+exports.uploadBannerImage = async (req, res) => {
+  const { section, field } = req.params;
+  const file = req.file;
+  const alt = req.body.alt || '';
+  
+  if (!file) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'No image uploaded' 
+    });
+  }
+
+  // Validate section and field parameters
+  const validSections = [
+    'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+    'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+    'termsConditionsBanner', 'privacyPolicyBanner'
+  ];
+  const validFields = ['banner', 'mobilebanner'];
+
+  if (!validSections.includes(section) || !validFields.includes(field)) {
+    // Clean up uploaded file if validation fails
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid section or field specified' 
+    });
+  }
+
   try {
-    const banners = await bannerService.addOrUpdateBanner(type, files, req.body);
-    res.json(banners);
+    // Create proper image URL path
+    const imageUrl = `/uploads/banners/${file.filename}`;
+    
+    // Prepare file metadata for tracking
+    const fileMetadata = {
+      filename: file.filename,
+      originalName: file.originalname,
+      size: file.size
+    };
+    
+    // Upload new image (this will automatically delete previous image)
+    const updatedBanners = await bannerService.uploadBannerImage(section, field, imageUrl, alt, fileMetadata);
+    
+    res.json({ 
+      success: true, 
+      message: `${field === 'banner' ? 'Desktop' : 'Mobile'} banner uploaded successfully`,
+      data: {
+        section,
+        field,
+        imageUrl,
+        metadata: fileMetadata,
+        banners: updatedBanners
+      }
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    // Clean up uploaded file on error
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    console.error('Upload error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to upload image: ' + err.message 
+    });
+  }
+};
+
+exports.updateBannerAlt = async (req, res) => {
+  const { section } = req.params;
+  const { alt } = req.body;
+  
+  // Validate section parameter
+  const validSections = [
+    'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+    'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+    'termsConditionsBanner', 'privacyPolicyBanner'
+  ];
+
+  if (!validSections.includes(section)) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid section specified' 
+    });
+  }
+
+  if (typeof alt !== 'string') {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Alt text must be a string' 
+    });
+  }
+  
+  try {
+    const updatedBanners = await bannerService.updateBannerAlt(section, alt);
+    res.json({ 
+      success: true, 
+      message: 'Alt text updated successfully',
+      data: {
+        section,
+        alt,
+        banners: updatedBanners
+      }
+    });
+  } catch (err) {
+    console.error('Alt text update error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update alt text: ' + err.message 
+    });
   }
 };
 
 exports.deleteBannerImage = async (req, res) => {
-  const { type, key, index } = req.params;
+  const { section, field } = req.params;
+  const { oldImageUrl } = req.body;
+  
+  // Validate parameters
+  const validSections = [
+    'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
+    'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
+    'termsConditionsBanner', 'privacyPolicyBanner'
+  ];
+  const validFields = ['banner', 'mobilebanner'];
+
+  if (!validSections.includes(section) || !validFields.includes(field)) {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Invalid section or field specified' 
+    });
+  }
+  
   try {
-    const banners = await bannerService.deleteBannerImage(type, key, index);
-    if (!banners) return res.status(404).json({ error: 'Not found' });
-    res.json(banners);
+    const updatedBanners = await bannerService.deleteBannerImage(section, field, oldImageUrl);
+    res.json({ 
+      success: true, 
+      message: `${field === 'banner' ? 'Desktop' : 'Mobile'} banner deleted successfully`,
+      data: {
+        section,
+        field,
+        banners: updatedBanners
+      }
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Delete error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to delete image: ' + err.message 
+    });
   }
 };

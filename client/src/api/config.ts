@@ -1,8 +1,14 @@
 // API configuration
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
+
+// Get base URL from environment variables
+const getBaseUrl = (): string => {
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+};
+
 export const API_CONFIG = {
-  BASE_URL: 'http://localhost:8080',
+  BASE_URL: getBaseUrl(),
   ENDPOINTS: {
     ADMIN: {
       LOGIN: '/api/admin/login',
