@@ -4,9 +4,9 @@ require('dotenv').config();
 
 const initializeBanners = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/shilp-adminpanel');
-    console.log('Connected to MongoDB');
+  // Connect to MongoDB
+  await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/shilp-adminpanel');
+  console.info('Connected to MongoDB');
 
     // Check if banner document already exists
     const existingBanner = await Banner.findOne();
@@ -87,10 +87,10 @@ const initializeBanners = async () => {
         }
       });
 
-      await initialBanner.save();
-      console.log('Initial banner document created successfully');
+  await initialBanner.save();
+  console.info('Initial banner document created successfully');
     } else {
-      console.log('Banner document already exists');
+  console.info('Banner document already exists');
       
       // Update existing document to ensure all sections are present
       const updateFields = {};
@@ -110,13 +110,13 @@ const initializeBanners = async () => {
         }
       });
 
-      if (Object.keys(updateFields).length > 0) {
+        if (Object.keys(updateFields).length > 0) {
         await Banner.updateOne({}, { $set: updateFields });
-        console.log('Missing sections added to existing banner document');
+        console.info('Missing sections added to existing banner document');
       }
     }
 
-    console.log('Banner initialization completed successfully');
+  console.info('Banner initialization completed successfully');
     process.exit(0);
   } catch (error) {
     console.error('Error initializing banners:', error);

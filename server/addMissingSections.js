@@ -5,7 +5,7 @@ const mongoose = require('mongoose');
 // Connect to MongoDB
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/shilp-adminpanel')
   .then(() => {
-    console.log('✅ Connected to MongoDB');
+    console.info('✅ Connected to MongoDB');
     addMissingSections();
   })
   .catch(err => {
@@ -23,11 +23,11 @@ async function addMissingSections() {
     const bannerDoc = await collection.findOne({ documentId: 'main-banners' });
     
     if (!bannerDoc) {
-      console.log('❌ No banner document found');
+      console.info('❌ No banner document found');
       process.exit(1);
     }
     
-    console.log('📋 Found banner document:', bannerDoc._id);
+    console.info('📋 Found banner document:', bannerDoc._id);
     
     // Define all required sections
     const requiredSections = [
@@ -40,11 +40,11 @@ async function addMissingSections() {
     const currentSections = requiredSections.filter(section => bannerDoc[section]);
     const missingSections = requiredSections.filter(section => !bannerDoc[section]);
     
-    console.log('📋 Current sections:', currentSections.length, currentSections);
-    console.log('📋 Missing sections:', missingSections.length, missingSections);
+  console.info('📋 Current sections:', currentSections.length, currentSections);
+  console.info('📋 Missing sections:', missingSections.length, missingSections);
     
     if (missingSections.length === 0) {
-      console.log('✅ All sections already exist!');
+      console.info('✅ All sections already exist!');
       process.exit(0);
     }
     
@@ -70,7 +70,7 @@ async function addMissingSections() {
       };
     });
     
-    console.log('➕ Adding missing sections:', Object.keys(updateObj));
+  console.info('➕ Adding missing sections:', Object.keys(updateObj));
     
     // Update the document
     const result = await collection.updateOne(
@@ -81,18 +81,18 @@ async function addMissingSections() {
       }
     );
     
-    console.log('📋 Update result:', result);
+  console.info('📋 Update result:', result);
     
     // Verify the result
     const updatedDoc = await collection.findOne({ documentId: 'main-banners' });
     const finalSections = requiredSections.filter(section => updatedDoc[section]);
     
-    console.log('✅ Update completed!');
-    console.log('📋 Final sections count:', finalSections.length, '/', requiredSections.length);
-    console.log('📋 Final sections list:', finalSections);
+  console.info('✅ Update completed!');
+  console.info('📋 Final sections count:', finalSections.length, '/', requiredSections.length);
+  console.info('📋 Final sections list:', finalSections);
     
-    mongoose.connection.close();
-    console.log('🔌 Database connection closed');
+  mongoose.connection.close();
+  console.info('🔌 Database connection closed');
     
   } catch (error) {
     console.error('❌ Error:', error);

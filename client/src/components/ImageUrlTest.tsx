@@ -27,9 +27,7 @@ export const ImageUrlTest: React.FC = () => {
                 console.error('Failed to load:', fullUrl);
                 e.currentTarget.style.border = '2px solid red';
               }}
-              onLoad={() => {
-                console.log('Successfully loaded:', fullUrl);
-              }}
+              onLoad={() => { /* image loaded */ }}
             />
           </div>
         );

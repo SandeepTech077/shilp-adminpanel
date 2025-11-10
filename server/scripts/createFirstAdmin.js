@@ -7,12 +7,12 @@ const createFirstAdmin = async () => {
   try {
     // Connect to database
     await mongoose.connect(process.env.DATABASE_URL);
-    console.log('✅ Connected to MongoDB');
+  // Connected to MongoDB
 
     // Check if admin already exists
     const existingAdmin = await Admin.findOne();
     if (existingAdmin) {
-      console.log('❌ Admin already exists in database');
+      // Admin already exists
       process.exit(1);
     }
 
@@ -35,14 +35,7 @@ const createFirstAdmin = async () => {
     const admin = new Admin(adminData);
     await admin.save();
 
-    console.log('✅ First admin created successfully!');
-    console.log('📋 Admin Details:');
-    console.log(`   Username: ${adminData.username}`);
-    console.log(`   Email: ${adminData.email}`);
-    console.log(`   Password: ${adminData.password}`);
-    console.log(`   Role: ${adminData.role}`);
-    console.log('');
-    console.log('⚠️  IMPORTANT: Please change the password after first login!');
+  // First admin created successfully. Please change password after first login.
     
   } catch (error) {
     console.error('❌ Error creating admin:', error.message);

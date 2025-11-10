@@ -21,13 +21,13 @@ const LazyImage: React.FC<LazyImageProps> = React.memo(({
   className, 
   onLoad, 
   onError, 
-  fallbackSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Mb2FkaW5nLi4uPC90ZXh0Pjwvc3ZnPg=='
+  fallbackSrc = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5Ob3QgQXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg=='
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [imageRef, setImageRef] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    if (!imageRef || !src) return;
+    if (!imageRef || !src || src.trim() === '') return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -51,6 +51,15 @@ const LazyImage: React.FC<LazyImageProps> = React.memo(({
     target.src = fallbackSrc;
     onError?.(e);
   };
+
+  // Don't render image if src is empty or invalid
+  if (!src || src.trim() === '') {
+    return (
+      <div className={`${className} bg-gray-100 flex items-center justify-center border-2 border-dashed border-gray-300 min-h-[100px]`}>
+        <span className="text-gray-500 text-sm">No Image</span>
+      </div>
+    );
+  }
 
   return (
     <img
@@ -146,9 +155,18 @@ const BannerManagement: React.FC = () => {
     const urls: Record<string, { desktop: string; mobile: string }> = {};
     BANNER_SECTIONS.forEach(({ key }) => {
       const sectionData = banners[key as keyof BannersData];
+      
+      // Ensure we only use valid, non-empty image paths
+      const desktopImage = sectionData?.banner && sectionData.banner.trim() !== '' 
+        ? getImageUrl(sectionData.banner) 
+        : '';
+      const mobileImage = sectionData?.mobilebanner && sectionData.mobilebanner.trim() !== '' 
+        ? getImageUrl(sectionData.mobilebanner) 
+        : '';
+        
       urls[key] = {
-        desktop: sectionData?.banner ? getImageUrl(sectionData.banner) : '',
-        mobile: sectionData?.mobilebanner ? getImageUrl(sectionData.mobilebanner) : ''
+        desktop: desktopImage,
+        mobile: mobileImage
       };
     });
     return urls;
@@ -192,32 +210,12 @@ const BannerManagement: React.FC = () => {
   const fetchBanners = useCallback(async (retryCount = 0) => {
     setLoading('fetch-all');
     setError('');
-    try {
-      console.log('🔄 Fetching banners from API...');
+      try {
       const response = await getBanners();
       
       if (response.success && response.data) {
-        console.log('📋 API Response received:', {
-          success: response.success,
-          hasData: !!response.data,
-          dataKeys: Object.keys(response.data),
-          dataStructure: {
-            _id: response.data._id,
-            documentId: response.data.documentId,
-            totalSections: Object.keys(response.data).filter(key => 
-              key.includes('Banner') || key === 'aboutUs' || key === 'contactBanners'
-            ).length
-          }
-        });
-        
-        // Log complete banner data for debugging
-        console.log('📋 Complete banner data received:', response.data);
-        
         setBanners(response.data);
         setError(''); // Clear any previous errors
-        
-        // Log successful data load
-        console.log('✅ Banner data successfully loaded into state');
       } else {
         throw new Error(response.error || 'Failed to fetch banners');
       }
@@ -227,7 +225,6 @@ const BannerManagement: React.FC = () => {
       
       // Retry mechanism for network issues
       if (retryCount < 2) {
-        console.log(`🔄 Retrying... (${retryCount + 1}/2)`);
         setTimeout(() => fetchBanners(retryCount + 1), 1000);
         return;
       }
@@ -245,33 +242,8 @@ const BannerManagement: React.FC = () => {
 
   // Debug effect to log banners state changes
   useEffect(() => {
-    if (Object.keys(banners).length > 0) {
-      // Define all expected sections
-      const expectedSections = [
-        'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
-        'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-        'termsConditionsBanner', 'privacyPolicyBanner'
-      ];
-      
-      const availableSections = expectedSections.filter(section => banners[section as keyof BannersData]);
-      const missingSections = expectedSections.filter(section => !banners[section as keyof BannersData]);
-      
-      console.log('🏠 Banners state updated:', {
-        expectedSections: expectedSections.length,
-        availableSections: availableSections.length,
-        missingSections: missingSections.length,
-        availableSectionsList: availableSections,
-        missingSectionsList: missingSections.length > 0 ? missingSections : 'none',
-        allSectionsPresent: availableSections.length === expectedSections.length,
-        sampleSection: banners.homepageBanner ? {
-          hasDesktop: !!banners.homepageBanner.banner,
-          hasMobile: !!banners.homepageBanner.mobilebanner,
-          hasAlt: !!banners.homepageBanner.alt,
-          hasDesktopMetadata: !!banners.homepageBanner.bannerMetadata,
-          hasMobileMetadata: !!banners.homepageBanner.mobilebannerMetadata
-        } : 'No homepage banner data',
-        rawDataKeys: Object.keys(banners)
-      });
+  if (Object.keys(banners).length > 0) {
+      // Banners state updated (verbose logging removed)
     }
   }, [banners]);
 
@@ -522,7 +494,7 @@ const BannerManagement: React.FC = () => {
                         alt={sectionData.alt || 'Desktop banner'}
                         className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
                         onLoad={() => {
-                          console.log('✅ Successfully loaded image:', memoizedImageUrls[key]?.desktop);
+                          console.info('✅ Successfully loaded image:', memoizedImageUrls[key]?.desktop);
                         }}
                         onError={(e) => {
                           console.error('❌ Failed to load image:', {
@@ -609,7 +581,7 @@ const BannerManagement: React.FC = () => {
                         alt={sectionData.alt || 'Mobile banner'}
                         className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
                         onLoad={() => {
-                          console.log('✅ Successfully loaded mobile image:', memoizedImageUrls[key]?.mobile);
+                          console.info('✅ Successfully loaded mobile image:', memoizedImageUrls[key]?.mobile);
                         }}
                         onError={(e) => {
                           console.error('❌ Failed to load mobile image:', {

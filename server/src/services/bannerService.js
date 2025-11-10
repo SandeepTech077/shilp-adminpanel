@@ -9,7 +9,6 @@ const CACHE_DURATION = 30 * 1000; // 30 seconds cache
 
 const getBanners = async () => {
   // Temporarily disable cache to ensure fresh data
-  console.log('🔄 Fetching fresh banner data from database (cache temporarily disabled)');
   
   const freshData = await bannerRepository.getBanners();
   
@@ -29,7 +28,6 @@ const getBanners = async () => {
   
   // Force add missing sections to the response
   missingSections.forEach(section => {
-    console.log(`➕ Adding missing section to response: ${section}`);
     cleanData[section] = {
       banner: '',
       mobilebanner: '',
@@ -52,19 +50,7 @@ const getBanners = async () => {
   // Re-check after adding missing sections
   const finalPresentSections = expectedSections.filter(section => cleanData[section]);
   
-  // Log fresh data structure
-  console.log('📋 Fresh data structure:', {
-    _id: cleanData._id,
-    documentId: cleanData.documentId,
-    expectedSections: expectedSections.length,
-    originalPresentSections: presentSections.length,
-    finalPresentSections: finalPresentSections.length,
-    missingSections: missingSections.length,
-    presentSectionsList: finalPresentSections,
-    missingSectionsList: missingSections.length > 0 ? missingSections : 'none',
-    allSectionsPresent: finalPresentSections.length === expectedSections.length,
-    totalFields: Object.keys(cleanData).length
-  });
+  // Fresh data prepared
   
   return cleanData;
 };
@@ -73,7 +59,7 @@ const getBanners = async () => {
 const clearBannersCache = () => {
   bannersCache = null;
   cacheTimestamp = null;
-  console.log('🗑️ Banner cache cleared');
+  // Banner cache cleared
 };
 
 // Enhanced upload function with automatic previous image deletion and metadata
@@ -165,9 +151,8 @@ const deleteImageFile = async (imageUrl) => {
     // Check if file exists and delete it
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
-      console.log(`Successfully deleted file: ${filePath}`);
     } else {
-      console.log(`File not found, skipping deletion: ${filePath}`);
+      // File not found, skip
     }
   } catch (error) {
     console.error('Error deleting image file:', error);

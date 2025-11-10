@@ -3,9 +3,9 @@ require('dotenv').config();
 
 const dropProblematicIndexes = async () => {
   try {
-    // Connect to database
-    await mongoose.connect(process.env.DATABASE_URL);
-    console.log('✅ Connected to MongoDB');
+  // Connect to database
+  await mongoose.connect(process.env.DATABASE_URL);
+  console.info('✅ Connected to MongoDB');
 
     const db = mongoose.connection.db;
     const collection = db.collection('projects');
@@ -21,38 +21,38 @@ const dropProblematicIndexes = async () => {
       'slug_1_isActive_1' // This creates duplicate with main slug_1
     ];
     
-    console.log('🚨 WARNING: This will drop the following indexes:');
+    console.info('🚨 WARNING: This will drop the following indexes:');
     indexesToDrop.forEach(indexName => {
-      console.log(`- ${indexName}`);
+      console.info(`- ${indexName}`);
     });
     
-    console.log('\n⚠️  Are you sure you want to proceed? This action cannot be undone.');
-    console.log('💡 Make sure to backup your database before proceeding.\n');
+    console.info('\n⚠️  Are you sure you want to proceed? This action cannot be undone.');
+    console.info('💡 Make sure to backup your database before proceeding.\n');
     
     // Drop each problematic index
     let droppedCount = 0;
     for (const indexName of indexesToDrop) {
       try {
-        await collection.dropIndex(indexName);
-        console.log(`✅ Dropped index: ${indexName}`);
+  await collection.dropIndex(indexName);
+  console.info(`✅ Dropped index: ${indexName}`);
         droppedCount++;
       } catch (error) {
         if (error.message.includes('index not found')) {
-          console.log(`ℹ️  Index not found (already dropped): ${indexName}`);
+          console.info(`ℹ️  Index not found (already dropped): ${indexName}`);
         } else {
           console.error(`❌ Failed to drop index ${indexName}:`, error.message);
         }
       }
     }
     
-    console.log(`\n🎉 Successfully dropped ${droppedCount} problematic indexes`);
-    console.log('✅ The duplicate key error should now be resolved!');
+  console.info(`\n🎉 Successfully dropped ${droppedCount} problematic indexes`);
+  console.info('✅ The duplicate key error should now be resolved!');
     
     // Show remaining indexes
     const remainingIndexes = await collection.indexes();
-    console.log('\n📋 Remaining indexes:');
+    console.info('\n📋 Remaining indexes:');
     remainingIndexes.forEach(index => {
-      console.log(`- ${index.name}: ${JSON.stringify(index.key)}`);
+      console.info(`- ${index.name}: ${JSON.stringify(index.key)}`);
     });
     
   } catch (error) {

@@ -235,7 +235,7 @@ const AdminLogin = () => {
               </label>
               <button
                 type="button"
-                onClick={() => console.log('Forgot password clicked')}
+                onClick={() => {}}
                 className="text-sm text-purple-300 hover:text-purple-200 transition-colors font-medium"
               >
                 Forgot password?
@@ -300,7 +300,7 @@ const AdminLogin = () => {
           <p className="text-blue-200/60 text-sm">
             Need help? Contact{' '}
             <button 
-              onClick={() => console.log('Support email clicked')}
+              onClick={() => {}}
               className="text-purple-300 hover:text-purple-200 font-medium transition-colors"
             >
               support@admin.com

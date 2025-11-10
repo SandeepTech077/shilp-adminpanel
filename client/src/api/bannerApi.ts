@@ -59,12 +59,7 @@ bannerApiClient.interceptors.request.use((config) => {
 // Get all banners
 export const getBanners = async (): Promise<BannerApiResponse<BannersData>> => {
   try {
-    console.log('🔄 Making API request to /api/banners...');
     const response = await bannerApiClient.get('/api/banners');
-
-console.log('📋 Raw API response:',response)
-    
-
     return response.data;
   } catch (error: unknown) {
     console.error('❌ Banner API request failed:', error);

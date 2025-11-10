@@ -3,9 +3,9 @@ require('dotenv').config();
 
 const checkDatabaseIndexes = async () => {
   try {
-    // Connect to database
-    await mongoose.connect(process.env.DATABASE_URL);
-    console.log('✅ Connected to MongoDB');
+  // Connect to database
+  await mongoose.connect(process.env.DATABASE_URL);
+  console.info('✅ Connected to MongoDB');
 
     const db = mongoose.connection.db;
     const collection = db.collection('projects');
@@ -13,15 +13,15 @@ const checkDatabaseIndexes = async () => {
     // Get all indexes
     const indexes = await collection.indexes();
     
-    console.log('📋 Current indexes on projects collection:');
-    console.log('==========================================');
+  console.info('📋 Current indexes on projects collection:');
+  console.info('==========================================');
     
     indexes.forEach((index, i) => {
-      console.log(`${i + 1}. Index Name: ${index.name}`);
-      console.log(`   Key: ${JSON.stringify(index.key)}`);
-      if (index.unique) console.log(`   Unique: ${index.unique}`);
-      if (index.sparse) console.log(`   Sparse: ${index.sparse}`);
-      console.log('');
+      console.info(`${i + 1}. Index Name: ${index.name}`);
+      console.info(`   Key: ${JSON.stringify(index.key)}`);
+      if (index.unique) console.info(`   Unique: ${index.unique}`);
+      if (index.sparse) console.info(`   Sparse: ${index.sparse}`);
+      console.info('');
     });
     
     // Check for problematic indexes
@@ -31,17 +31,17 @@ const checkDatabaseIndexes = async () => {
     );
     
     if (problematicIndexes.length > 0) {
-      console.log('⚠️  Problematic indexes found:');
+      console.info('⚠️  Problematic indexes found:');
       problematicIndexes.forEach(index => {
-        console.log(`- ${index.name}: ${JSON.stringify(index.key)}`);
+        console.info(`- ${index.name}: ${JSON.stringify(index.key)}`);
       });
       
-      console.log('\n🔧 To drop problematic indexes, run:');
+      console.info('\n🔧 To drop problematic indexes, run:');
       problematicIndexes.forEach(index => {
-        console.log(`db.projects.dropIndex("${index.name}")`);
+        console.info(`db.projects.dropIndex("${index.name}")`);
       });
     } else {
-      console.log('✅ No problematic indexes found');
+      console.info('✅ No problematic indexes found');
     }
     
   } catch (error) {

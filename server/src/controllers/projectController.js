@@ -19,21 +19,18 @@ class ProjectController {
         });
       }
 
-      // Debug: Log received data (only in development)
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Raw request body:', req.body);
-        console.log('Received files:', Object.keys(req.files || {}));
-        console.log('aboutUsDescriptions keys:', Object.keys(req.body).filter(key => key.includes('aboutUsDescriptions')));
-      }
+      // Debug logs removed to reduce console output
 
       // Parse form data
       const parsedData = this.parseFormData(req.body);
       
+      // DEBUG: Log parsed aboutUsDetail
+      console.log('🔍 CONTROLLER: Final parsedData.aboutUsDetail:', JSON.stringify(parsedData.aboutUsDetail, null, 2));
+      
       // Add unique slug generation
       parsedData.slug = await this.generateUniqueSlug(parsedData.projectTitle);
       
-      console.log('Parsed data for project creation:', JSON.stringify(parsedData, null, 2));
-      console.log('aboutUsDescriptions:', JSON.stringify(parsedData.aboutUsDescriptions, null, 2));
+  // Parsed data prepared for project creation
       
       // Ensure mobile numbers have +91 prefix (if not already present)
       if (parsedData.number1) {
@@ -98,12 +95,13 @@ class ProjectController {
   async getAllProjects(req, res) {
     try {
       const {
-        page = 1,
-        limit = 10,
-        sort = 'createdAt',
-        order = 'desc',
+        page = 1, 
+        limit = 10, 
+        sort = 'createdAt', 
+        order = 'desc', 
         state,
         type,
+        cardType,
         search
       } = req.query;
 
@@ -116,11 +114,10 @@ class ProjectController {
       // Add filters
       const filter = {};
       if (state) filter.projectState = state;
-      if (type) filter.cardProjectType = type;
+      if (type) filter.projectType = type; // Main project type filter
+      if (cardType) filter.cardProjectType = cardType; // Card display type filter
       
-      options.filter = filter;
-
-      let result;
+      options.filter = filter;      let result;
       if (search) {
         result = await projectService.searchProjects(search, options);
       } else {
@@ -384,46 +381,18 @@ class ProjectController {
   parseFormData(body) {
     const parsed = { ...body };
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 Parsing form data...');
-      console.log('Raw body keys:', Object.keys(body));
-    }
+    // Parsing form data
 
-    // Parse aboutUsDescriptions array  
-    const aboutUsKeys = Object.keys(body).filter(key => key.startsWith('aboutUsDescriptions['));
-    if (aboutUsKeys.length > 0) {
-      parsed.aboutUsDescriptions = [];
-      aboutUsKeys.forEach(key => {
-        const match = key.match(/aboutUsDescriptions\[(\d+)\]/);
-        if (match) {
-          const index = parseInt(match[1]);
-          const text = body[key];
-          if (text && text.trim()) { // Only add non-empty descriptions
-            if (!parsed.aboutUsDescriptions[index]) {
-              parsed.aboutUsDescriptions[index] = {};
-            }
-            parsed.aboutUsDescriptions[index].text = text.trim();
-          }
-        }
-      });
-      // Filter out any undefined entries
-      parsed.aboutUsDescriptions = parsed.aboutUsDescriptions.filter(desc => desc && desc.text);
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed aboutUsDescriptions:', parsed.aboutUsDescriptions);
-      }
-    } else if (body.aboutUsDescriptions) {
-      // Handle case where aboutUsDescriptions is sent as a direct string
-      if (typeof body.aboutUsDescriptions === 'string' && body.aboutUsDescriptions.trim()) {
-        parsed.aboutUsDescriptions = [{ text: body.aboutUsDescriptions.trim() }];
-      } else {
-        parsed.aboutUsDescriptions = [];
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed aboutUsDescriptions (fallback):', parsed.aboutUsDescriptions);
-      }
-    } else {
-      parsed.aboutUsDescriptions = [];
-    }
+    // Parse aboutUsDetail (4 individual description fields)
+    parsed.aboutUsDetail = {
+      description1: body.description1 || '',
+      description2: body.description2 || '',
+      description3: body.description3 || '',
+      description4: body.description4 || '',
+      image: { alt: body.aboutUsAlt || '' }
+    };
+
+    console.log('🔍 Parsed aboutUsDetail:', JSON.stringify(parsed.aboutUsDetail, null, 2));
 
     // Parse floor plans array
     const floorPlanKeys = Object.keys(body).filter(key => key.startsWith('floorPlans['));
@@ -440,9 +409,7 @@ class ProjectController {
           parsed.floorPlans[index][field] = body[key];
         }
       });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed floorPlans:', parsed.floorPlans);
-      }
+      // Parsed floorPlans
     }
 
     // Parse project images array
@@ -460,9 +427,7 @@ class ProjectController {
           parsed.projectImages[index][field] = body[key];
         }
       });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed projectImages:', parsed.projectImages);
-      }
+      // Parsed projectImages
     }
 
     // Parse amenities array
@@ -480,9 +445,7 @@ class ProjectController {
           parsed.amenities[index][field] = body[key];
         }
       });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed amenities:', parsed.amenities);
-      }
+      // Parsed amenities
     }
 
     // Parse updated images array
@@ -500,9 +463,7 @@ class ProjectController {
           parsed.updatedImages[index][field] = body[key];
         }
       });
-      if (process.env.NODE_ENV === 'development') {
-        console.log('✅ Parsed updatedImages:', parsed.updatedImages);
-      }
+      // Parsed updatedImages
     }
 
     return parsed;

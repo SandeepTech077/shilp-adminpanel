@@ -113,6 +113,10 @@ const projectValidation = {
       .isIn(['on-going', 'completed'])
       .withMessage('Project state must be either "on-going" or "completed"'),
 
+    body('projectType')
+      .isIn(['residential', 'commercial', 'plot'])
+      .withMessage('Project type must be either "residential", "commercial", or "plot"'),
+
     body('shortAddress')
       .trim()
       .notEmpty()
@@ -123,6 +127,32 @@ const projectValidation = {
     body('projectStatusPercentage')
       .isInt({ min: 0, max: 100 })
       .withMessage('Project status percentage must be between 0 and 100'),
+
+    // About Us Descriptions validation (4 individual fields)
+    body('description1')
+      .trim()
+      .notEmpty()
+      .withMessage('At least one description is required')
+      .isLength({ max: 2000 })
+      .withMessage('Description 1 cannot exceed 2000 characters'),
+
+    body('description2')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 2 cannot exceed 2000 characters'),
+
+    body('description3')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 3 cannot exceed 2000 characters'),
+
+    body('description4')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 4 cannot exceed 2000 characters'),
 
     body('aboutUsAlt')
       .optional()
@@ -205,10 +235,14 @@ const projectValidation = {
       .withMessage('Card area cannot exceed 50 characters'),
 
     body('cardProjectType')
+      .notEmpty()
+      .withMessage('Card project type is required')
       .isIn(['residential', 'commercial', 'plot'])
       .withMessage('Card project type must be one of: residential, commercial, plot'),
 
     body('cardHouse')
+      .notEmpty()
+      .withMessage('Card house status is required')
       .isIn(['Ready to Move', 'Sample House Ready'])
       .withMessage('Card house status must be either "Ready to Move" or "Sample House Ready"'),
 
@@ -243,6 +277,11 @@ const projectValidation = {
       .isIn(['on-going', 'completed'])
       .withMessage('Project state must be either "on-going" or "completed"'),
 
+    body('projectType')
+      .optional()
+      .isIn(['residential', 'commercial', 'plot'])
+      .withMessage('Project type must be either "residential", "commercial", or "plot"'),
+
     body('shortAddress')
       .optional()
       .trim()
@@ -255,6 +294,31 @@ const projectValidation = {
       .optional()
       .isInt({ min: 0, max: 100 })
       .withMessage('Project status percentage must be between 0 and 100'),
+
+    // About Us Descriptions validation (4 individual fields)
+    body('description1')
+      .optional()
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 1 cannot exceed 2000 characters'),
+
+    body('description2')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 2 cannot exceed 2000 characters'),
+
+    body('description3')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 3 cannot exceed 2000 characters'),
+
+    body('description4')
+      .optional({ checkFalsy: false })
+      .trim()
+      .isLength({ max: 2000 })
+      .withMessage('Description 4 cannot exceed 2000 characters'),
 
     body('aboutUsAlt')
       .optional()

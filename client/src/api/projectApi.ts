@@ -145,8 +145,9 @@ export const createProjectFormData = (projectData: ProjectForm): FormData => {
   formData.append('projectStatusPercentage', projectData.projectStatusPercentage.toString());
   
   // About Us descriptions
-  projectData.aboutUsDescriptions.forEach((desc: { text: string }, index: number) => {
-    formData.append(`aboutUsDescriptions[${index}]`, desc.text);
+  projectData.aboutUsDescriptions.forEach((desc: { id?: string; text: string }, index: number) => {
+    formData.append(`aboutUsDescriptions[${index}][id]`, desc.id || '');
+    formData.append(`aboutUsDescriptions[${index}][text]`, desc.text || '');
   });
   
   formData.append('aboutUsAlt', projectData.aboutUsAlt);

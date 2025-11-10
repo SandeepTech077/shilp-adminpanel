@@ -1,8 +1,4 @@
 
-const getApiBaseUrl = (): string => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
-};
-
 /**
  * Get base URL from environment or fallback for image loading
  * Images should always be served via frontend URL (with proxy to backend)
@@ -61,23 +57,7 @@ export const getImageUrl = (imagePath: string | undefined | null, cacheBust: boo
     fullUrl += `${separator}t=${Date.now()}`;
   }
 
-  // Debug logging
-  if (import.meta.env.DEV) {
-    console.log('🖼️ Image URL constructed:', {
-      originalPath: imagePath,
-      fullUrl,
-      imageBaseUrl,
-      apiBaseUrl: getApiBaseUrl(),
-      cacheBust,
-      environment: import.meta.env.DEV ? 'development' : 'production',
-      envVars: {
-        VITE_IMAGE_BASE_URL: import.meta.env.VITE_IMAGE_BASE_URL,
-        VITE_API_BASE_URL: import.meta.env.VITE_API_BASE_URL,
-        VITE_DEV_PORT: import.meta.env.VITE_DEV_PORT,
-        VITE_PROD_PORT: import.meta.env.VITE_PROD_PORT
-      }
-    });
-  }
+  // Debug logging removed
 
   return fullUrl;
 };

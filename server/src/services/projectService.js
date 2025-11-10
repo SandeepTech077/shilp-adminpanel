@@ -13,13 +13,8 @@ class ProjectService {
     let savedFiles = []; // Track saved files for cleanup
     
     try {
-      // Debug logging
-      if (process.env.NODE_ENV === 'development') {
-        console.log('ProjectService.createProject - Input data:');
-        console.log('aboutUsDescriptions:', JSON.stringify(projectData.aboutUsDescriptions, null, 2));
-        console.log('aboutUsDescriptions type:', typeof projectData.aboutUsDescriptions);
-        console.log('aboutUsDescriptions is array:', Array.isArray(projectData.aboutUsDescriptions));
-      }
+      // DEBUG: Log incoming projectData
+      console.log('🔍 SERVICE createProject: Incoming projectData.aboutUsDetail:', JSON.stringify(projectData.aboutUsDetail, null, 2));
       
       // Check if slug already exists
       const slugExists = await projectRepository.slugExists(projectData.slug);
@@ -30,18 +25,16 @@ class ProjectService {
       // Process file uploads and update paths
       const processedData = await this.processFileUploads(projectData, files);
       
-      // Debug processed data
-      if (process.env.NODE_ENV === 'development') {
-        console.log('After processFileUploads:');
-        console.log('aboutUsDescriptions:', JSON.stringify(processedData.aboutUsDescriptions, null, 2));
-        console.log('aboutUsDescriptions type:', typeof processedData.aboutUsDescriptions);
-      }
+      // DEBUG: Log after file processing
+      console.log('🔍 SERVICE createProject: After processFileUploads, aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
       
       // Extract saved file paths for cleanup if needed
       savedFiles = this.extractSavedFilePaths(processedData);
 
       // Create project
       const project = await projectRepository.create(processedData);
+      
+      console.log('🔍 SERVICE createProject: Created project aboutUsDetail:', JSON.stringify(project.aboutUsDetail, null, 2));
       
       return {
         success: true,
@@ -50,7 +43,6 @@ class ProjectService {
       };
     } catch (error) {
       // Clean up saved files if project creation fails
-      console.log('Project creation failed, cleaning up saved files...');
       await this.cleanupSavedFiles(savedFiles);
       throw new Error(`Failed to create project: ${error.message}`);
     }
@@ -220,7 +212,6 @@ class ProjectService {
       };
     } catch (error) {
       // Clean up new uploaded files if update fails
-      console.log('Project update failed, cleaning up new files...');
       await this.cleanupSavedFiles(newSavedFiles);
       throw new Error(`Failed to update project: ${error.message}`);
     }
@@ -309,6 +300,8 @@ class ProjectService {
   async processFileUploads(data, files = {}, existingProject = null) {
     const processedData = { ...data };
     
+    console.log('🔍 processFileUploads START: aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
+    
     // Create project-specific folder based on projectTitle
     const projectFolderName = this.createSafeDirectoryName(data.projectTitle || existingProject?.projectTitle || 'untitled');
     const uploadDir = path.join(process.cwd(), 'uploads', 'projects', projectFolderName);
@@ -328,14 +321,39 @@ class ProjectService {
         }
       }
 
-      // Process about us image
+      // Process about us image and update aboutUsDetail
       if (files.aboutUsImage && files.aboutUsImage[0]) {
         const aboutUsImagePath = await this.saveFile(files.aboutUsImage[0], uploadDir, 'about', projectFolderName);
-        processedData.aboutUsImage = aboutUsImagePath;
+        
+        // Update aboutUsDetail.image.url (preserve existing description fields)
+        if (!processedData.aboutUsDetail) {
+          processedData.aboutUsDetail = {
+            description1: '',
+            description2: '',
+            description3: '',
+            description4: '',
+            image: {}
+          };
+        }
+        if (!processedData.aboutUsDetail.image) {
+          processedData.aboutUsDetail.image = {};
+        }
+        
+        processedData.aboutUsDetail.image.url = aboutUsImagePath;
+        
+        console.log('🔍 Service: aboutUsDetail after image processing:', JSON.stringify(processedData.aboutUsDetail, null, 2));
         
         // Delete old about us image if updating
-        if (existingProject && existingProject.aboutUsImage) {
-          await this.deleteFile(existingProject.aboutUsImage);
+        if (existingProject && existingProject.aboutUsDetail && existingProject.aboutUsDetail.image && existingProject.aboutUsDetail.image.url) {
+          await this.deleteFile(existingProject.aboutUsDetail.image.url);
+        }
+      } else {
+        // No image uploaded, ensure aboutUsDetail structure exists
+        if (processedData.aboutUsDetail) {
+          console.log('🔍 Service: No image uploaded, preserving description fields');
+          if (!processedData.aboutUsDetail.image) {
+            processedData.aboutUsDetail.image = { alt: processedData.aboutUsDetail.image?.alt || '' };
+          }
         }
       }
 
@@ -458,6 +476,8 @@ class ProjectService {
         }
       }
 
+      console.log('🔍 processFileUploads END: aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
+      
       return processedData;
     } catch (error) {
       throw new Error(`File upload processing failed: ${error.message}`);
@@ -553,7 +573,9 @@ class ProjectService {
     
     // Add main file paths
     if (processedData.brochure) filePaths.push(processedData.brochure);
-    if (processedData.aboutUsImage) filePaths.push(processedData.aboutUsImage);
+    if (processedData.aboutUsDetail && processedData.aboutUsDetail.image && processedData.aboutUsDetail.image.url) {
+      filePaths.push(processedData.aboutUsDetail.image.url);
+    }
     if (processedData.cardImage) filePaths.push(processedData.cardImage);
     
     // Add floor plan images
@@ -610,14 +632,13 @@ class ProjectService {
       return;
     }
     
-    console.log(`Cleaning up ${filePaths.length} saved files...`);
+  // Cleaning up saved files
     
     for (const filePath of filePaths) {
       try {
         if (filePath) {
           const fullPath = path.join(process.cwd(), filePath);
           await fs.unlink(fullPath);
-          console.log(`Deleted file: ${filePath}`);
         }
       } catch (error) {
         console.warn(`Failed to delete file ${filePath}:`, error.message);
@@ -634,7 +655,9 @@ class ProjectService {
 
     // Collect all file paths
     if (project.brochure) filesToDelete.push(project.brochure);
-    if (project.aboutUsImage) filesToDelete.push(project.aboutUsImage);
+    if (project.aboutUsDetail && project.aboutUsDetail.image && project.aboutUsDetail.image.url) {
+      filesToDelete.push(project.aboutUsDetail.image.url);
+    }
     if (project.cardImage) filesToDelete.push(project.cardImage);
 
     // Floor plan images

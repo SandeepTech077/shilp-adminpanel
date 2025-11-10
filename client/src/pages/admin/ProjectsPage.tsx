@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Trash2, Plus, Save, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { API_CONFIG } from '../../api/config';
+import SuccessModal from '../../components/modals/SuccessModal';
 
 type ProjectState = 'on-going' | 'completed';
 type ProjectType = 'residential' | 'commercial' | 'plot';
@@ -32,9 +33,16 @@ type Amenity = {
   preview?: string;
 };
 
-type AboutDescription = {
-  id: string;
-  text: string;
+type AboutUsDetail = {
+  description1: string;
+  description2: string;
+  description3: string;
+  description4: string;
+  image: {
+    alt: string;
+    file?: File;
+    preview?: string;
+  };
 };
 
 type FormData = {
@@ -42,12 +50,10 @@ type FormData = {
   slug: string;
   brochureFile?: File;
   projectState: ProjectState;
+  projectType: ProjectType;
   shortAddress: string;
   projectStatusPercentage: number;
-  aboutUsDescriptions: AboutDescription[];
-  aboutUsImageFile?: File;
-  aboutUsImagePreview?: string;
-  aboutUsAlt: string;
+  aboutUsDetail: AboutUsDetail;
   floorPlans: FloorPlan[];
   projectImages: ImageItem[];
   amenities: Amenity[];
@@ -77,15 +83,18 @@ const ProjectAdminForm = () => {
     projectTitle: '',
     slug: '',
     projectState: 'on-going',
+    projectType: 'residential',
     shortAddress: '',
     projectStatusPercentage: 0,
-    aboutUsDescriptions: [
-      {
-        id: Date.now().toString() + '_desc',
-        text: '',
+    aboutUsDetail: {
+      description1: '',
+      description2: '',
+      description3: '',
+      description4: '',
+      image: {
+        alt: '',
       },
-    ],
-    aboutUsAlt: '',
+    },
     floorPlans: [
       {
         id: Date.now().toString(),
@@ -127,7 +136,15 @@ const ProjectAdminForm = () => {
     cardHouse: 'Ready to Move',
     reraNumber: '',
   });
-  console.log('Current form data:', formData);
+  
+  // Validation errors state - stores backend validation errors for each field
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  
+  // Removed verbose console logging for form data
 
   // Utility functions
   const generateSlug = (title: string): string => {
@@ -173,6 +190,15 @@ const ProjectAdminForm = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+    
     let processedValue = value;
     
     // Auto-generate slug when project title changes
@@ -212,25 +238,44 @@ const ProjectAdminForm = () => {
     });
   };
 
-  // About Us Descriptions
-  const addAboutDescription = () => {
+  // About Us Image handlers
+  const handleAboutUsImageUpload = (file: File) => {
+    const preview = URL.createObjectURL(file);
     setFormData(prev => ({
       ...prev,
-      aboutUsDescriptions: [...prev.aboutUsDescriptions, { id: Date.now().toString(), text: '' }],
+      aboutUsDetail: {
+        ...prev.aboutUsDetail,
+        image: {
+          ...prev.aboutUsDetail.image,
+          file,
+          preview,
+        },
+      },
     }));
   };
 
-  const removeAboutDescription = (id: string) => {
+  const removeAboutUsImage = () => {
     setFormData(prev => ({
       ...prev,
-      aboutUsDescriptions: prev.aboutUsDescriptions.filter(desc => desc.id !== id),
+      aboutUsDetail: {
+        ...prev.aboutUsDetail,
+        image: {
+          alt: prev.aboutUsDetail.image.alt,
+        },
+      },
     }));
   };
 
-  const updateAboutDescription = (id: string, text: string) => {
+  const updateAboutUsImageAlt = (alt: string) => {
     setFormData(prev => ({
       ...prev,
-      aboutUsDescriptions: prev.aboutUsDescriptions.map(desc => desc.id === id ? { ...desc, text } : desc),
+      aboutUsDetail: {
+        ...prev.aboutUsDetail,
+        image: {
+          ...prev.aboutUsDetail.image,
+          alt,
+        },
+      },
     }));
   };
 
@@ -427,10 +472,6 @@ const ProjectAdminForm = () => {
     }
     
     // Array field validation
-    if (formData.aboutUsDescriptions.length === 0) {
-      errors.push('At least one About Us description is required');
-    }
-    
     if (formData.floorPlans.length === 0) {
       errors.push('At least one floor plan is required');
     }
@@ -445,7 +486,7 @@ const ProjectAdminForm = () => {
     
     // File validation
     if (!formData.brochureFile) errors.push('Brochure PDF is required');
-    if (!formData.aboutUsImageFile) errors.push('About Us image is required');
+    if (!formData.aboutUsDetail.image.file) errors.push('About Us image is required');
     if (!formData.cardImageFile) errors.push('Card image is required');
     
     // Show validation errors
@@ -459,6 +500,7 @@ const ProjectAdminForm = () => {
     formDataToSend.append('projectTitle', formData.projectTitle);
     formDataToSend.append('slug', formData.slug);
     formDataToSend.append('projectState', formData.projectState);
+    formDataToSend.append('projectType', formData.projectType);
     formDataToSend.append('shortAddress', formData.shortAddress);
     formDataToSend.append('projectStatusPercentage', formData.projectStatusPercentage.toString());
     
@@ -466,14 +508,16 @@ const ProjectAdminForm = () => {
       formDataToSend.append('brochure', formData.brochureFile);
     }
     
-    formData.aboutUsDescriptions.forEach((desc, index) => {
-      formDataToSend.append(`aboutUsDescriptions[${index}]`, desc.text);
-    });
+    // About Us Detail - Descriptions (4 individual fields)
+    formDataToSend.append('description1', formData.aboutUsDetail.description1 || '');
+    formDataToSend.append('description2', formData.aboutUsDetail.description2 || '');
+    formDataToSend.append('description3', formData.aboutUsDetail.description3 || '');
+    formDataToSend.append('description4', formData.aboutUsDetail.description4 || '');
     
-    formDataToSend.append('aboutUsAlt', formData.aboutUsAlt);
-    
-    if (formData.aboutUsImageFile) {
-      formDataToSend.append('aboutUsImage', formData.aboutUsImageFile);
+    // About Us Detail - Image
+    formDataToSend.append('aboutUsAlt', formData.aboutUsDetail.image.alt || '');
+    if (formData.aboutUsDetail.image.file) {
+      formDataToSend.append('aboutUsImage', formData.aboutUsDetail.image.file);
     }
     
     formData.floorPlans.forEach((fp, index) => {
@@ -538,25 +582,33 @@ const ProjectAdminForm = () => {
         body: formDataToSend,
       });
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('Project created successfully:', result);
-        alert('Project created successfully! ✅');
+  if (response.ok) {
+  await response.json();
+  
+  // Clear any previous validation errors
+  setValidationErrors({});
+  
+  // Show success modal
+  setSuccessMessage(`Project "${formData.projectTitle}" created successfully!`);
+  setShowSuccessModal(true);
         
         // Reset form after successful submission
         setFormData({
           projectTitle: '',
           slug: '',
           projectState: 'on-going',
+          projectType: 'residential',
           shortAddress: '',
           projectStatusPercentage: 0,
-          aboutUsDescriptions: [
-            {
-              id: Date.now().toString() + '_desc',
-              text: '',
+          aboutUsDetail: {
+            description1: '',
+            description2: '',
+            description3: '',
+            description4: '',
+            image: {
+              alt: '',
             },
-          ],
-          aboutUsAlt: '',
+          },
           floorPlans: [
             {
               id: Date.now().toString(),
@@ -601,12 +653,44 @@ const ProjectAdminForm = () => {
       } else {
         const errorData = await response.json();
         console.error('Error creating project:', errorData);
-        alert(`Error creating project: ${errorData.message || 'Unknown error'} ❌`);
+        
+        // Parse validation errors from backend
+        if (errorData.errors && Array.isArray(errorData.errors)) {
+          // Backend returns array of errors: [{ path: 'fieldName', msg: 'Error message' }]
+          const errorsMap: Record<string, string> = {};
+          errorData.errors.forEach((err: { path?: string; msg: string; param?: string }) => {
+            const fieldName = err.path || err.param;
+            if (fieldName) {
+              errorsMap[fieldName] = err.msg;
+            }
+          });
+          setValidationErrors(errorsMap);
+          
+          // Show error alert with field-specific errors
+          const errorMessages = errorData.errors.map((err: { path?: string; msg: string; param?: string }) => 
+            `${err.path || err.param}: ${err.msg}`
+          ).join('\n');
+          alert(`Validation Errors:\n\n${errorMessages}`);
+        } else {
+          // Generic error
+          alert(`Error creating project: ${errorData.message || 'Unknown error'} ❌`);
+        }
       }
     } catch (error) {
       console.error('Error:', error);
       alert('Error connecting to server! ❌');
+      setValidationErrors({});
     }
+  };
+
+  // Helper component to display field errors
+  const FieldError: React.FC<{ fieldName: string }> = ({ fieldName }) => {
+    if (!validationErrors[fieldName]) return null;
+    return (
+      <p className="text-red-600 text-sm mt-1 font-medium">
+        ⚠️ {validationErrors[fieldName]}
+      </p>
+    );
   };
 
   return (
@@ -631,9 +715,12 @@ const ProjectAdminForm = () => {
                     name="projectTitle"
                     value={formData.projectTitle}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      validationErrors.projectTitle ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                     required
                   />
+                  <FieldError fieldName="projectTitle" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -646,9 +733,12 @@ const ProjectAdminForm = () => {
                     value={formData.slug}
                     onChange={handleInputChange}
                     placeholder="Auto-generated or enter custom slug"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 ${
+                      validationErrors.slug ? 'border-red-500 bg-red-100' : 'border-gray-300'
+                    }`}
                     required
                   />
+                  <FieldError fieldName="slug" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Project State *</label>
@@ -660,6 +750,19 @@ const ProjectAdminForm = () => {
                   >
                     <option value="on-going">On-going</option>
                     <option value="completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Type *</label>
+                  <select
+                    name="projectType"
+                    value={formData.projectType}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="residential">Residential</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="plot">Plot</option>
                   </select>
                 </div>
                 <div>
@@ -719,37 +822,86 @@ const ProjectAdminForm = () => {
               </h2>
               <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <label className="text-sm font-medium text-gray-700">About Us Descriptions</label>
-                    <button
-                      type="button"
-                      onClick={addAboutDescription}
-                      className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
-                    >
-                      <Plus size={16} /> Add Description
-                    </button>
-                  </div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    About Us Descriptions
+                  </label>
                   <div className="space-y-3">
-                    {formData.aboutUsDescriptions.map((desc, idx) => (
-                      <div key={desc.id} className="flex gap-2">
-                        <textarea
-                          placeholder={`Description ${idx + 1}`}
-                          value={desc.text}
-                          onChange={e => updateAboutDescription(desc.id, e.target.value)}
-                          rows={3}
-                          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                        />
-                        {formData.aboutUsDescriptions.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeAboutDescription(desc.id)}
-                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg h-fit"
-                          >
-                            <Trash2 size={20} />
-                          </button>
-                        )}
-                      </div>
-                    ))}
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Description 1 <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        placeholder="Enter first description (required)"
+                        value={formData.aboutUsDetail.description1}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          aboutUsDetail: { ...prev.aboutUsDetail, description1: e.target.value }
+                        }))}
+                        rows={3}
+                        required
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          validationErrors.description1 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      <FieldError fieldName="description1" />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Description 2 <span className="text-gray-400">(Optional)</span>
+                      </label>
+                      <textarea
+                        placeholder="Enter second description (optional)"
+                        value={formData.aboutUsDetail.description2}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          aboutUsDetail: { ...prev.aboutUsDetail, description2: e.target.value }
+                        }))}
+                        rows={3}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          validationErrors.description2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      <FieldError fieldName="description2" />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Description 3 <span className="text-gray-400">(Optional)</span>
+                      </label>
+                      <textarea
+                        placeholder="Enter third description (optional)"
+                        value={formData.aboutUsDetail.description3}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          aboutUsDetail: { ...prev.aboutUsDetail, description3: e.target.value }
+                        }))}
+                        rows={3}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          validationErrors.description3 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      <FieldError fieldName="description3" />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">
+                        Description 4 <span className="text-gray-400">(Optional)</span>
+                      </label>
+                      <textarea
+                        placeholder="Enter fourth description (optional)"
+                        value={formData.aboutUsDetail.description4}
+                        onChange={e => setFormData(prev => ({
+                          ...prev,
+                          aboutUsDetail: { ...prev.aboutUsDetail, description4: e.target.value }
+                        }))}
+                        rows={3}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                          validationErrors.description4 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                        }`}
+                      />
+                      <FieldError fieldName="description4" />
+                    </div>
                   </div>
                 </div>
 
@@ -757,16 +909,16 @@ const ProjectAdminForm = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-3">Upload About Us Image *</label>
                   <div className="flex items-center gap-6">
                     <div className="shrink-0">
-                      {formData.aboutUsImagePreview ? (
+                      {formData.aboutUsDetail.image.preview ? (
                         <div className="relative">
                           <img
-                            src={formData.aboutUsImagePreview}
+                            src={formData.aboutUsDetail.image.preview}
                             alt="Preview"
                             className="w-60 h-60 object-cover rounded-xl border-4 border-white shadow-lg"
                           />
                           <button
                             type="button"
-                            onClick={() => removeUploadedFile('aboutUsImage')}
+                            onClick={removeAboutUsImage}
                             className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
                           >
                             <X size={18} />
@@ -781,13 +933,13 @@ const ProjectAdminForm = () => {
                     <div className="flex-1">
                       <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-md">
                         <Upload size={16} />
-                        {formData.aboutUsImagePreview ? 'Change Image' : 'Choose Image'}
+                        {formData.aboutUsDetail.image.preview ? 'Change Image' : 'Choose Image'}
                         <input
                           type="file"
                           accept="image/*"
                           onChange={(e) => {
                             const file = e.target.files?.[0];
-                            if (file) handleFileUpload(file, 'aboutUsImage');
+                            if (file) handleAboutUsImageUpload(file);
                           }}
                           className="hidden"
                         />
@@ -795,9 +947,8 @@ const ProjectAdminForm = () => {
                       <input
                         type="text"
                         placeholder="Image Alt Text"
-                        name="aboutUsAlt"
-                        value={formData.aboutUsAlt}
-                        onChange={handleInputChange}
+                        value={formData.aboutUsDetail.image.alt}
+                        onChange={(e) => updateAboutUsImageAlt(e.target.value)}
                         className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
@@ -1221,12 +1372,15 @@ const ProjectAdminForm = () => {
                       onChange={handleInputChange}
                       placeholder="10-digit mobile number"
                       maxLength={10}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500"
+                      className={`w-full px-4 py-2 border rounded-r-lg focus:ring-2 focus:ring-blue-500 ${
+                        validationErrors.number1 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                     />
                   </div>
                   {formData.number1 && !validateMobileNumber(formData.number1) && (
                     <p className="text-red-500 text-xs mt-1">Please enter a valid 10-digit mobile number</p>
                   )}
+                  <FieldError fieldName="number1" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1243,12 +1397,15 @@ const ProjectAdminForm = () => {
                       onChange={handleInputChange}
                       placeholder="10-digit mobile number"
                       maxLength={10}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500"
+                      className={`w-full px-4 py-2 border rounded-r-lg focus:ring-2 focus:ring-blue-500 ${
+                        validationErrors.number2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                      }`}
                     />
                   </div>
                   {formData.number2 && !validateMobileNumber(formData.number2) && (
                     <p className="text-red-500 text-xs mt-1">Please enter a valid 10-digit mobile number</p>
                   )}
+                  <FieldError fieldName="number2" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1260,11 +1417,14 @@ const ProjectAdminForm = () => {
                     value={formData.email1}
                     onChange={handleInputChange}
                     placeholder="Enter primary email"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      validationErrors.email1 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   />
                   {formData.email1 && !validateEmail(formData.email1) && (
                     <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>
                   )}
+                  <FieldError fieldName="email1" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1276,11 +1436,14 @@ const ProjectAdminForm = () => {
                     value={formData.email2}
                     onChange={handleInputChange}
                     placeholder="Enter secondary email"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
+                      validationErrors.email2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                    }`}
                   />
                   {formData.email2 && !validateEmail(formData.email2) && (
                     <p className="text-red-500 text-xs mt-1">Please enter a valid email address</p>
                   )}
+                  <FieldError fieldName="email2" />
                 </div>
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Map Iframe URL</label>
@@ -1419,6 +1582,14 @@ const ProjectAdminForm = () => {
           </form>
         </div>
       </div>
+      
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        title="Project Created Successfully! 🎉"
+        message={successMessage}
+        onClose={() => setShowSuccessModal(false)}
+      />
     </div>
   );
 };

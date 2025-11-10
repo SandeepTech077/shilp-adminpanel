@@ -28,52 +28,34 @@ const getBanners = async () => {
   };
   
   if (!banners) {
-    console.log('📋 Creating new banners document with all sections');
-    
     const allSections = {};
     requiredSections.forEach(section => {
       allSections[section] = defaultSection;
     });
-    
     banners = new Banner({ 
       documentId: 'main-banners',
       ...allSections
     });
-    
     await banners.save();
-    console.log('✅ Created new banner document');
   } else {
-    console.log('📋 Checking existing banners document');
-    
     let needsUpdate = false;
-    
     requiredSections.forEach(section => {
       if (!banners[section] || Object.keys(banners[section]).length === 0) {
-        console.log(`➕ Adding missing section: ${section}`);
         banners[section] = defaultSection;
         // Mark the field as modified for Mongoose to save it
         banners.markModified(section);
         needsUpdate = true;
       }
     });
-    
     if (needsUpdate) {
       await banners.save();
-      console.log('✅ Updated banner document with missing sections');
     }
   }
   
   // Fetch fresh data after save to ensure consistency
   banners = await Banner.findOne({ documentId: 'main-banners' }).lean();
   
-  console.log('📋 Final banner data:', {
-    documentId: banners.documentId,
-    sections: requiredSections.map(s => ({
-      name: s,
-      exists: !!banners[s],
-      hasData: banners[s]?.banner || banners[s]?.mobilebanner ? true : false
-    }))
-  });
+  // Final banner data prepared
   
   return banners;
 };

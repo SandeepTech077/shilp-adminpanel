@@ -24,6 +24,11 @@ const projectSchema = new mongoose.Schema({
     enum: ['on-going', 'completed'],
     required: [true, 'Project state is required']
   },
+  projectType: {
+    type: String,
+    enum: ['residential', 'commercial', 'plot'],
+    required: [true, 'Project type is required']
+  },
   shortAddress: {
     type: String,
     required: [true, 'Short address is required'],
@@ -37,21 +42,40 @@ const projectSchema = new mongoose.Schema({
     max: [100, 'Percentage cannot be more than 100']
   },
   
-  // About Us Section
-  aboutUsDescriptions: [{
-    text: {
+  // About Us Section - Combined Detail
+  aboutUsDetail: {
+    description1: {
       type: String,
-      required: [true, 'Description text is required'],
-      trim: true
+      trim: true,
+      required: [true, 'At least one description is required'],
+      default: ''
+    },
+    description2: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    description3: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    description4: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    image: {
+      url: {
+        type: String,
+        trim: true
+      },
+      alt: {
+        type: String,
+        trim: true,
+        default: ''
+      }
     }
-  }],
-  aboutUsImage: {
-    type: String,
-    trim: true
-  },
-  aboutUsAlt: {
-    type: String,
-    trim: true
   },
   
   // Floor Plans

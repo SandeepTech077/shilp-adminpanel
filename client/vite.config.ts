@@ -24,15 +24,9 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           configure: (proxy) => {
-            proxy.on('error', (err) => {
-              console.log('proxy error', err);
-            });
-            proxy.on('proxyReq', (_proxyReq, req) => {
-              console.log('Sending Request to the Target:', req.method, req.url);
-            });
-            proxy.on('proxyRes', (proxyRes, req) => {
-              console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
-            });
+            proxy.on('error', () => {});
+            proxy.on('proxyReq', () => {});
+            proxy.on('proxyRes', () => {});
           },
         },
         // Serve uploaded images through frontend (proxy to backend)
@@ -41,15 +35,9 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
           configure: (proxy) => {
-            proxy.on('error', (err) => {
-              console.log('uploads proxy error', err);
-            });
-            proxy.on('proxyReq', (_proxyReq, req) => {
-              console.log('Serving Image via Frontend:', req.method, req.url);
-            });
-            proxy.on('proxyRes', (proxyRes, req) => {
-              console.log('Image Response:', proxyRes.statusCode, req.url);
-            });
+            proxy.on('error', () => {});
+            proxy.on('proxyReq', () => {});
+            proxy.on('proxyRes', () => {});
           },
         },
       },

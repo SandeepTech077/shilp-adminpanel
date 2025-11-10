@@ -9,7 +9,7 @@ const connectDatabase = async () => {
 
     await mongoose.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
 
-    console.log('✅ Connected to MongoDB successfully');
+  // Connected to MongoDB
 
     // Handle connection events
     mongoose.connection.on('error', (error) => {
@@ -17,11 +17,11 @@ const connectDatabase = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('⚠️ MongoDB disconnected');
+      // MongoDB disconnected
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('🔄 MongoDB reconnected');
+      // MongoDB reconnected
     });
 
   } catch (error) {
@@ -33,7 +33,7 @@ const connectDatabase = async () => {
 const disconnectDatabase = async () => {
   try {
     await mongoose.disconnect();
-    console.log('👋 Disconnected from MongoDB');
+  // Disconnected from MongoDB
   } catch (error) {
     console.error('❌ Error disconnecting from MongoDB:', error);
   }

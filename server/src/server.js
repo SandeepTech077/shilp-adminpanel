@@ -56,8 +56,27 @@ app.use('/uploads', (req, res, next) => {
     return;
   }
   
+  // Image requests are proxied/served here. Removed verbose logging in production.
+  
   next();
-}, express.static(uploadDir));
+}, express.static(uploadDir, {
+  // Add 404 handling for missing files
+  fallthrough: false,
+  maxAge: 0 // No caching
+}));
+
+// Add 404 handler for missing upload files
+app.use('/uploads', (err, req, res, next) => {
+  if (err && err.status === 404) {
+    res.status(404).json({
+      success: false,
+      message: 'Image not found',
+      path: req.url
+    });
+  } else {
+    next(err);
+  }
+});
 
 // Routes without rate limiting
 app.use('/api/health', healthRoutes);
@@ -70,9 +89,7 @@ const startServer = async () => {
     await connectDatabase();
 
     app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔗 CORS origin: ${process.env.CORS_ORIGIN || 'http://localhost:5173'}`);
+      // Server started
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
@@ -94,12 +111,12 @@ process.on('uncaughtException', (err) => {
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
+  // SIGTERM received
   process.exit(0);
 });
 
 process.on('SIGINT', () => {
-  console.log('SIGINT received. Shutting down gracefully...');
+  // SIGINT received
   process.exit(0);
 });
 

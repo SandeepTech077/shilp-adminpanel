@@ -7,41 +7,24 @@ const checkAdminStatus = async () => {
   try {
     // Connect to database
     await mongoose.connect(process.env.DATABASE_URL);
-    console.log('✅ Connected to MongoDB');
+  // Connected to MongoDB
 
     // Check existing admins
     const admins = await Admin.find({}, 'username email role permissions isActive');
     
     if (admins.length === 0) {
-      console.log('❌ No admins found in database');
-      console.log('💡 Run: npm run create-admin');
+      // No admins found
       return;
     }
 
-    console.log('📋 Existing Admins:');
-    console.log('==================');
-    
     admins.forEach((admin, index) => {
-      console.log(`\n${index + 1}. Admin Details:`);
-      console.log(`   Username: ${admin.username}`);
-      console.log(`   Email: ${admin.email}`);
-      console.log(`   Role: ${admin.role}`);
-      console.log(`   Active: ${admin.isActive}`);
-      console.log(`   Permissions: ${admin.permissions.join(', ')}`);
-      
-      // Check if role matches what the middleware expects
+      // Admin details available; suppressed verbose output
       const hasValidRole = admin.role === 'admin' || admin.role === 'super-admin';
       const hasProjectPermissions = admin.permissions.includes('projects.create');
-      
-      console.log(`   ✅ Valid Role: ${hasValidRole}`);
-      console.log(`   ✅ Has Project Permissions: ${hasProjectPermissions}`);
-      
-      if (!hasValidRole) {
-        console.log(`   ⚠️  Role issue: Expected 'admin' or 'super-admin', got '${admin.role}'`);
-      }
-      
-      if (!hasProjectPermissions) {
-        console.log(`   ⚠️  Missing 'projects.create' permission`);
+
+      if (!hasValidRole || !hasProjectPermissions) {
+        // Important issues found; print minimal info
+        console.error('Admin permission/role issue for:', admin.username);
       }
     });
     
