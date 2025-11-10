@@ -26,7 +26,9 @@ const createFirstAdmin = async () => {
       permissions: [
         'users.read', 'users.write', 'users.delete',
         'analytics.read', 'settings.read', 'settings.write',
-        'system.manage'
+        'system.manage',
+        'projects.create', 'projects.read', 'projects.update', 'projects.delete',
+        'banners.create', 'banners.read', 'banners.update', 'banners.delete'
       ]
     };
 

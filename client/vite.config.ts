@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Get port from environment variables
   const devPort = parseInt(env.VITE_DEV_PORT || '5174', 10)
   const prodPort = parseInt(env.VITE_PROD_PORT || '5174', 10)
-  const apiBaseUrl = env.VITE_API_BASE_URL || 'http://localhost:8081'
+  const apiBaseUrl = env.VITE_API_BASE_URL 
   
   const port = mode === 'production' ? prodPort : devPort
 

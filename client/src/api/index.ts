@@ -77,6 +77,9 @@ export const apiUtils = {
   },
 };
 
+// Project API
+export * from './projectApi';
+
 export default {
   apiUtils,
 };

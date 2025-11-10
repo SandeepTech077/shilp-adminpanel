@@ -1,10 +1,4 @@
-/**
- * Utility functions for handling image URLs and paths
- */
 
-/**
- * Get base URL from environment or fallback for API calls
- */
 const getApiBaseUrl = (): string => {
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
 };
@@ -18,11 +12,11 @@ const getImageBaseUrl = (): string => {
   
   if (isDev) {
     // In development, use frontend URL (images served via proxy)
-    const devPort = import.meta.env.VITE_DEV_PORT || '5174';
+    const devPort = import.meta.env.VITE_DEV_PORT 
     return `http://localhost:${devPort}`;
   } else {
     // In production, use configured image base URL (still frontend)
-    return import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:5174';
+    return import.meta.env.VITE_IMAGE_BASE_URL 
   }
 };
 

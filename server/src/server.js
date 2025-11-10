@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const bannerRoutes = require('./routes/bannerRoutes'); // Added bannerRoutes require
+const projectRoutes = require('./routes/projectRoutes'); // Added projectRoutes require
 require('dotenv').config();
 
 const { connectDatabase } = require('./config/database');
@@ -14,7 +15,7 @@ const adminRoutes = require('./routes/adminRoutes');
 
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8081;
 
 // Security middleware
 app.use(helmet());
@@ -62,6 +63,7 @@ app.use('/uploads', (req, res, next) => {
 app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/banners', bannerRoutes); // Mount banner routes with proper API prefix
+app.use('/api/projects', projectRoutes); // Mount project routes with proper API prefix
 const startServer = async () => {
   try {
     // Connect to database

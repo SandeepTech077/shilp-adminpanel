@@ -48,7 +48,15 @@ const adminSchema = new mongoose.Schema({
       'analytics.read',
       'settings.read',
       'settings.write',
-      'system.manage'
+      'system.manage',
+      'projects.create',
+      'projects.read',
+      'projects.update',
+      'projects.delete',
+      'banners.create',
+      'banners.read',
+      'banners.update',
+      'banners.delete'
     ]
   }],
   isActive: {

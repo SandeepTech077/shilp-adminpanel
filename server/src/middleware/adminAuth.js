@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const adminService = require('../services/adminService');
 
-const authenticateAdmin = async (req, res, next) => {
+const verifyToken = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
@@ -57,4 +57,33 @@ const authenticateAdmin = async (req, res, next) => {
   }
 };
 
-module.exports = { authenticateAdmin };
+const requirePermission = (permission) => {
+  return (req, res, next) => {
+    if (!req.admin) {
+      return res.status(401).json({
+        success: false,
+        error: { message: 'Authentication required' }
+      });
+    }
+
+    // For now, assume all admins have all permissions
+    // You can implement proper permission checking here
+    if (req.admin.role === 'admin' || req.admin.role === 'super-admin') {
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      error: { message: 'Insufficient permissions' }
+    });
+  };
+};
+
+// Legacy export for backward compatibility
+const authenticateAdmin = verifyToken;
+
+module.exports = { 
+  authenticateAdmin, 
+  verifyToken,
+  requirePermission
+};
