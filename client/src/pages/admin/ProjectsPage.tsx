@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Trash2, Plus, Save, Upload, X, Image as ImageIcon } from 'lucide-react';
+import { Plus, Save, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { API_CONFIG } from '../../api/config';
 import SuccessModal from '../../components/modals/SuccessModal';
+import { FormField, SelectField, TextAreaField, ImageUploadField, FloorPlanCard, ProjectImageCard, AmenityCard } from '../../components/admin/projects';
 
 type ProjectState = 'on-going' | 'completed';
 type ProjectType = 'residential' | 'commercial' | 'plot';
@@ -208,6 +209,16 @@ const ProjectAdminForm = () => {
         ...prev, 
         [name]: value,
         slug: newSlug 
+      }));
+      return;
+    }
+    
+    // Auto-sync cardProjectType when projectType changes
+    if (name === 'projectType') {
+      setFormData(prev => ({ 
+        ...prev, 
+        projectType: value as ProjectType,
+        cardProjectType: value as ProjectType
       }));
       return;
     }
@@ -708,85 +719,71 @@ const ProjectAdminForm = () => {
                 Basic Information
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
-                  <input
-                    type="text"
-                    name="projectTitle"
-                    value={formData.projectTitle}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                      validationErrors.projectTitle ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                    }`}
-                    required
-                  />
-                  <FieldError fieldName="projectTitle" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Slug <span className="text-red-500">*</span>
-                    <span className="text-xs text-gray-500 ml-2">(Auto-generated from title)</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="slug"
-                    value={formData.slug}
-                    onChange={handleInputChange}
-                    placeholder="Auto-generated or enter custom slug"
-                    className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-50 ${
-                      validationErrors.slug ? 'border-red-500 bg-red-100' : 'border-gray-300'
-                    }`}
-                    required
-                  />
-                  <FieldError fieldName="slug" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project State *</label>
-                  <select
-                    name="projectState"
-                    value={formData.projectState}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="on-going">On-going</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Type *</label>
-                  <select
-                    name="projectType"
-                    value={formData.projectType}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="residential">Residential</option>
-                    <option value="commercial">Commercial</option>
-                    <option value="plot">Plot</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status Percentage *</label>
-                  <input
-                    type="number"
-                    name="projectStatusPercentage"
-                    value={formData.projectStatusPercentage}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="100"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Short Address *</label>
-                  <input
-                    type="text"
-                    name="shortAddress"
-                    value={formData.shortAddress}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
+                <FormField
+                  label="Project Title"
+                  name="projectTitle"
+                  value={formData.projectTitle}
+                  onChange={handleInputChange}
+                  required
+                  error={validationErrors.projectTitle}
+                />
+                
+                <FormField
+                  label="Slug"
+                  name="slug"
+                  value={formData.slug}
+                  onChange={handleInputChange}
+                  placeholder="Auto-generated or enter custom slug"
+                  required
+                  error={validationErrors.slug}
+                  helperText="(Auto-generated from title)"
+                  className="bg-gray-50"
+                />
+                
+                <SelectField
+                  label="Project State"
+                  name="projectState"
+                  value={formData.projectState}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: 'on-going', label: 'On-going' },
+                    { value: 'completed', label: 'Completed' }
+                  ]}
+                  required
+                />
+                
+                <SelectField
+                  label="Project Type"
+                  name="projectType"
+                  value={formData.projectType}
+                  onChange={handleInputChange}
+                  options={[
+                    { value: 'residential', label: 'Residential' },
+                    { value: 'commercial', label: 'Commercial' },
+                    { value: 'plot', label: 'Plot' }
+                  ]}
+                  required
+                />
+                
+                <FormField
+                  label="Status Percentage"
+                  name="projectStatusPercentage"
+                  value={formData.projectStatusPercentage}
+                  onChange={handleInputChange}
+                  type="number"
+                  min={0}
+                  max={100}
+                  required
+                />
+                
+                <FormField
+                  label="Short Address"
+                  name="shortAddress"
+                  value={formData.shortAddress}
+                  onChange={handleInputChange}
+                  required
+                  className="md:col-span-2"
+                />
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Upload Brochure (PDF) *</label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-500 transition-colors">
@@ -826,134 +823,72 @@ const ProjectAdminForm = () => {
                     About Us Descriptions
                   </label>
                   <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Description 1 <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        placeholder="Enter first description (required)"
-                        value={formData.aboutUsDetail.description1}
-                        onChange={e => setFormData(prev => ({
-                          ...prev,
-                          aboutUsDetail: { ...prev.aboutUsDetail, description1: e.target.value }
-                        }))}
-                        rows={3}
-                        required
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          validationErrors.description1 ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                      <FieldError fieldName="description1" />
-                    </div>
+                    <TextAreaField
+                      label="Description 1"
+                      value={formData.aboutUsDetail.description1}
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        aboutUsDetail: { ...prev.aboutUsDetail, description1: e.target.value }
+                      }))}
+                      placeholder="Enter first description (required)"
+                      required
+                      rows={3}
+                      error={validationErrors.description1}
+                    />
                     
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Description 2 <span className="text-gray-400">(Optional)</span>
-                      </label>
-                      <textarea
-                        placeholder="Enter second description (optional)"
-                        value={formData.aboutUsDetail.description2}
-                        onChange={e => setFormData(prev => ({
-                          ...prev,
-                          aboutUsDetail: { ...prev.aboutUsDetail, description2: e.target.value }
-                        }))}
-                        rows={3}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          validationErrors.description2 ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                      <FieldError fieldName="description2" />
-                    </div>
+                    <TextAreaField
+                      label="Description 2"
+                      value={formData.aboutUsDetail.description2}
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        aboutUsDetail: { ...prev.aboutUsDetail, description2: e.target.value }
+                      }))}
+                      placeholder="Enter second description (optional)"
+                      rows={3}
+                      error={validationErrors.description2}
+                      helperText="Optional"
+                    />
                     
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Description 3 <span className="text-gray-400">(Optional)</span>
-                      </label>
-                      <textarea
-                        placeholder="Enter third description (optional)"
-                        value={formData.aboutUsDetail.description3}
-                        onChange={e => setFormData(prev => ({
-                          ...prev,
-                          aboutUsDetail: { ...prev.aboutUsDetail, description3: e.target.value }
-                        }))}
-                        rows={3}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          validationErrors.description3 ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                      <FieldError fieldName="description3" />
-                    </div>
+                    <TextAreaField
+                      label="Description 3"
+                      value={formData.aboutUsDetail.description3}
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        aboutUsDetail: { ...prev.aboutUsDetail, description3: e.target.value }
+                      }))}
+                      placeholder="Enter third description (optional)"
+                      rows={3}
+                      error={validationErrors.description3}
+                      helperText="Optional"
+                    />
                     
-                    <div>
-                      <label className="block text-xs text-gray-600 mb-1">
-                        Description 4 <span className="text-gray-400">(Optional)</span>
-                      </label>
-                      <textarea
-                        placeholder="Enter fourth description (optional)"
-                        value={formData.aboutUsDetail.description4}
-                        onChange={e => setFormData(prev => ({
-                          ...prev,
-                          aboutUsDetail: { ...prev.aboutUsDetail, description4: e.target.value }
-                        }))}
-                        rows={3}
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 ${
-                          validationErrors.description4 ? 'border-red-500 bg-red-50' : 'border-gray-300'
-                        }`}
-                      />
-                      <FieldError fieldName="description4" />
-                    </div>
+                    <TextAreaField
+                      label="Description 4"
+                      value={formData.aboutUsDetail.description4}
+                      onChange={e => setFormData(prev => ({
+                        ...prev,
+                        aboutUsDetail: { ...prev.aboutUsDetail, description4: e.target.value }
+                      }))}
+                      placeholder="Enter fourth description (optional)"
+                      rows={3}
+                      error={validationErrors.description4}
+                      helperText="Optional"
+                    />
                   </div>
                 </div>
 
-                <div className="bg-linear-to-r from-blue-50 to-white p-6 rounded-xl border-2 border-blue-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Upload About Us Image *</label>
-                  <div className="flex items-center gap-6">
-                    <div className="shrink-0">
-                      {formData.aboutUsDetail.image.preview ? (
-                        <div className="relative">
-                          <img
-                            src={formData.aboutUsDetail.image.preview}
-                            alt="Preview"
-                            className="w-60 h-60 object-cover rounded-xl border-4 border-white shadow-lg"
-                          />
-                          <button
-                            type="button"
-                            onClick={removeAboutUsImage}
-                            className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
-                          >
-                            <X size={18} />
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="w-60 h-60 border-2 border-dashed border-green-300 rounded-xl flex items-center justify-center bg-white">
-                          <ImageIcon className="w-20 h-20 text-green-300" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <label className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-md">
-                        <Upload size={16} />
-                        {formData.aboutUsDetail.image.preview ? 'Change Image' : 'Choose Image'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleAboutUsImageUpload(file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Image Alt Text"
-                        value={formData.aboutUsDetail.image.alt}
-                        onChange={(e) => updateAboutUsImageAlt(e.target.value)}
-                        className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
-                </div>
+                <ImageUploadField
+                  label="Upload About Us Image"
+                  preview={formData.aboutUsDetail.image.preview}
+                  onUpload={handleAboutUsImageUpload}
+                  onRemove={removeAboutUsImage}
+                  altText={formData.aboutUsDetail.image.alt}
+                  onAltChange={updateAboutUsImageAlt}
+                  required
+                  accept="image/*"
+                  width="w-60"
+                  height="h-60"
+                />
               </div>
             </section>
 
@@ -970,81 +905,20 @@ const ProjectAdminForm = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {formData.floorPlans.map((fp, idx) => (
-                  <div key={fp.id} className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border-2 border-blue-200 shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-blue-700 text-lg">Floor Plan {idx + 1}</h3>
-                      {formData.floorPlans.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeFloorPlan(fp.id)}
-                          className="text-red-600 hover:bg-red-100 p-1.5 rounded-lg"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      {/* Image Preview Section */}
-                      <div className="flex justify-center">
-                        {fp.preview ? (
-                          <div className="relative">
-                            <img
-                              src={fp.preview}
-                              alt="Preview"
-                              className="w-full h-48 object-cover rounded-xl border-2 border-blue-200 shadow-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeFloorPlanFile(fp.id)}
-                              className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-full h-48 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center bg-white">
-                            <div className="text-center">
-                              <ImageIcon className="w-16 h-16 text-blue-300 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500">Floor Plan Image</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Upload Button */}
-                      <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-md w-full">
-                        <Upload size={16} />
-                        {fp.preview ? 'Change Image' : 'Upload Image'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleFloorPlanFileUpload(fp.id, file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      
-                      {/* Title Input */}
-                      <input
-                        type="text"
-                        placeholder="Floor Plan Title"
-                        value={fp.title}
-                        onChange={e => updateFloorPlan(fp.id, 'title', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                      
-                      {/* Alt Text Input */}
-                      <input
-                        type="text"
-                        placeholder="Alt Text for Accessibility"
-                        value={fp.alt}
-                        onChange={e => updateFloorPlan(fp.id, 'alt', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  <FloorPlanCard
+                    key={fp.id}
+                    id={fp.id}
+                    index={idx}
+                    title={fp.title}
+                    alt={fp.alt}
+                    preview={fp.preview}
+                    onImageUpload={handleFloorPlanFileUpload}
+                    onImageRemove={removeFloorPlanFile}
+                    onTitleChange={updateFloorPlan}
+                    onAltChange={updateFloorPlan}
+                    onRemoveCard={removeFloorPlan}
+                    canRemove={formData.floorPlans.length > 1}
+                  />
                 ))}
               </div>
             </section>
@@ -1069,72 +943,17 @@ const ProjectAdminForm = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {formData.projectImages.map((img) => (
-                  <div key={img.id} className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border-2 border-blue-200 shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-blue-700 text-lg">Project Image</h3>
-                      {formData.projectImages.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeProjectImage(img.id)}
-                          className="text-red-600 hover:bg-red-100 p-1.5 rounded-lg"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      {/* Image Preview Section */}
-                      <div className="flex justify-center">
-                        {img.preview ? (
-                          <div className="relative">
-                            <img
-                              src={img.preview}
-                              alt="Preview"
-                              className="w-full h-48 object-cover rounded-xl border-2 border-blue-200 shadow-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeProjectImageFile(img.id)}
-                              className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-full h-48 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center bg-white">
-                            <div className="text-center">
-                              <ImageIcon className="w-16 h-16 text-blue-300 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500">Project Image</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Upload Button */}
-                      <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-md w-full">
-                        <Upload size={16} />
-                        {img.preview ? 'Change Image' : 'Upload Image'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleProjectImageFileUpload(img.id, file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      
-                      {/* Alt Text Input */}
-                      <input
-                        type="text"
-                        placeholder="Alt Text for Accessibility"
-                        value={img.alt}
-                        onChange={e => updateProjectImage(img.id, 'alt', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  <ProjectImageCard
+                    key={img.id}
+                    id={img.id}
+                    alt={img.alt}
+                    preview={img.preview}
+                    onAltChange={updateProjectImage}
+                    onImageUpload={handleProjectImageFileUpload}
+                    onImageRemove={removeProjectImageFile}
+                    onRemoveCard={removeProjectImage}
+                    canRemove={formData.projectImages.length > 1}
+                  />
                 ))}
               </div>
             </section>
@@ -1152,81 +971,20 @@ const ProjectAdminForm = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {formData.amenities.map((am, idx) => (
-                  <div key={am.id} className="bg-gradient-to-r from-blue-50 to-white p-6 rounded-xl border-2 border-blue-200 shadow-sm">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="font-bold text-blue-700 text-lg">Amenity {idx + 1}</h3>
-                      {formData.amenities.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeAmenity(am.id)}
-                          className="text-red-600 hover:bg-red-100 p-1.5 rounded-lg"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="space-y-4">
-                      {/* Image Preview Section */}
-                      <div className="flex justify-center">
-                        {am.preview ? (
-                          <div className="relative">
-                            <img
-                              src={am.preview}
-                              alt="Preview"
-                              className="w-full h-48 object-cover rounded-xl border-2 border-blue-200 shadow-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeAmenityFile(am.id)}
-                              className="absolute -top-2 -right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
-                            >
-                              <X size={16} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-full h-48 border-2 border-dashed border-blue-300 rounded-xl flex items-center justify-center bg-white">
-                            <div className="text-center">
-                              <ImageIcon className="w-16 h-16 text-blue-300 mx-auto mb-2" />
-                              <p className="text-sm text-gray-500">Amenity Icon/Image</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Upload Button */}
-                      <label className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-md w-full">
-                        <Upload size={16} />
-                        {am.preview ? 'Change Icon' : 'Upload Icon'}
-                        <input
-                          type="file"
-                          accept="image/*,.svg"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleAmenityFileUpload(am.id, file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                      
-                      {/* Title Input */}
-                      <input
-                        type="text"
-                        placeholder="Amenity Title"
-                        value={am.title}
-                        onChange={e => updateAmenity(am.id, 'title', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                      
-                      {/* Alt Text Input */}
-                      <input
-                        type="text"
-                        placeholder="Alt Text for Accessibility"
-                        value={am.alt}
-                        onChange={e => updateAmenity(am.id, 'alt', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      />
-                    </div>
-                  </div>
+                  <AmenityCard
+                    key={am.id}
+                    id={am.id}
+                    index={idx}
+                    title={am.title}
+                    alt={am.alt}
+                    preview={am.preview}
+                    onTitleChange={updateAmenity}
+                    onAltChange={updateAmenity}
+                    onImageUpload={handleAmenityFileUpload}
+                    onImageRemove={removeAmenityFile}
+                    onRemoveCard={removeAmenity}
+                    canRemove={formData.amenities.length > 1}
+                  />
                 ))}
               </div>
             </section>
@@ -1488,12 +1246,14 @@ const ProjectAdminForm = () => {
                     name="cardProjectType"
                     value={formData.cardProjectType}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    disabled
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-gray-100 cursor-not-allowed"
                   >
                     <option value="residential">Residential</option>
                     <option value="commercial">Commercial</option>
                     <option value="plot">Plot</option>
                   </select>
+                  <p className="text-xs text-gray-500 mt-1">Auto-synced with main Project Type</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">House Status</label>

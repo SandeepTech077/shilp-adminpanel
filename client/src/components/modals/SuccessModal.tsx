@@ -1,5 +1,5 @@
-import React from 'react';
-import { X, CheckCircle, Upload, Save, Trash2 } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { X, CheckCircle2 } from 'lucide-react';
 
 export interface SuccessModalProps {
   isOpen: boolean;
@@ -25,14 +25,20 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
   details,
   onClose
 }) => {
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      // Prevent body scroll when modal is open
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
-  const getIcon = () => {
-    if (title.includes('Upload')) return <Upload className="w-6 h-6 text-green-600" />;
-    if (title.includes('Delete')) return <Trash2 className="w-6 h-6 text-green-600" />;
-    if (title.includes('Update') || title.includes('Alt')) return <Save className="w-6 h-6 text-green-600" />;
-    return <CheckCircle className="w-6 h-6 text-green-600" />;
-  };
+  if (!isOpen) return null;
 
   const formatFileSize = (bytes?: number): string => {
     if (!bytes) return 'Unknown size';
@@ -42,100 +48,149 @@ const SuccessModal: React.FC<SuccessModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            {getIcon()}
-            <h2 className="text-xl font-semibold text-gray-800">{title}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6">
-          <p className="text-gray-600 mb-4">{message}</p>
-
-          {/* Details Section */}
-          {details && (
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
-              <h3 className="text-sm font-semibold text-green-800 mb-2">Details:</h3>
-              
-              {details.section && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-green-700 font-medium">Section:</span>
-                  <span className="text-sm text-green-600">{details.section}</span>
-                </div>
-              )}
-              
-              {details.field && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-green-700 font-medium">Field:</span>
-                  <span className="text-sm text-green-600">
-                    {details.field === 'banner' ? 'Desktop Banner' : 'Mobile Banner'}
-                  </span>
-                </div>
-              )}
-              
-              {details.imageUrl && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-green-700 font-medium">Image:</span>
-                  <span className="text-sm text-green-600 truncate max-w-48" title={details.imageUrl}>
-                    {details.imageUrl}
-                  </span>
-                </div>
-              )}
-              
-              {details.metadata && (
-                <>
-                  {details.metadata.originalName && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-green-700 font-medium">Original Name:</span>
-                      <span className="text-sm text-green-600 truncate max-w-48" title={details.metadata.originalName}>
-                        {details.metadata.originalName}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {details.metadata.size && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-green-700 font-medium">File Size:</span>
-                      <span className="text-sm text-green-600">
-                        {formatFileSize(details.metadata.size)}
-                      </span>
-                    </div>
-                  )}
-                  
-                  {details.metadata.filename && (
-                    <div className="flex justify-between">
-                      <span className="text-sm text-green-700 font-medium">Saved As:</span>
-                      <span className="text-sm text-green-600 truncate max-w-48" title={details.metadata.filename}>
-                        {details.metadata.filename}
-                      </span>
-                    </div>
-                  )}
-                </>
-              )}
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fadeIn"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full transform transition-all animate-slideUp"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Success Icon Circle */}
+        <div className="flex justify-center pt-8 pb-4">
+          <div className="relative">
+            {/* Animated background circle */}
+            <div className="absolute inset-0 bg-blue-100 rounded-full animate-ping opacity-75"></div>
+            {/* Main circle */}
+            <div className="relative bg-linear-to-br from-blue-500 to-blue-600 rounded-full p-4 shadow-lg">
+              <CheckCircle2 className="w-12 h-12 text-white" strokeWidth={2.5} />
             </div>
-          )}
+          </div>
         </div>
+
+        {/* Header */}
+        <div className="text-center px-8 py-4">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">{title}</h2>
+          <p className="text-gray-600 text-base leading-relaxed">{message}</p>
+        </div>
+
+        {/* Details Section */}
+        {details && (
+          <div className="px-8 pb-6">
+            <div className="bg-linear-to-br from-blue-50 to-white border-2 border-blue-100 rounded-xl p-5 shadow-sm">
+              <h3 className="text-sm font-bold text-blue-900 mb-3 uppercase tracking-wide flex items-center gap-2">
+                <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
+                Details
+              </h3>
+              
+              <div className="space-y-2.5">
+                {details.section && (
+                  <div className="flex items-center justify-between py-1.5 border-b border-blue-100 last:border-0">
+                    <span className="text-sm font-semibold text-gray-700">Section:</span>
+                    <span className="text-sm text-blue-700 font-medium bg-blue-50 px-3 py-1 rounded-lg">
+                      {details.section}
+                    </span>
+                  </div>
+                )}
+                
+                {details.field && (
+                  <div className="flex items-center justify-between py-1.5 border-b border-blue-100 last:border-0">
+                    <span className="text-sm font-semibold text-gray-700">Field:</span>
+                    <span className="text-sm text-blue-700 font-medium bg-blue-50 px-3 py-1 rounded-lg">
+                      {details.field === 'banner' ? 'Desktop Banner' : 'Mobile Banner'}
+                    </span>
+                  </div>
+                )}
+                
+                {details.imageUrl && (
+                  <div className="flex items-start justify-between py-1.5 border-b border-blue-100 last:border-0">
+                    <span className="text-sm font-semibold text-gray-700">Image URL:</span>
+                    <span className="text-sm text-blue-600 truncate max-w-64 text-right" title={details.imageUrl}>
+                      {details.imageUrl}
+                    </span>
+                  </div>
+                )}
+                
+                {details.metadata?.originalName && (
+                  <div className="flex items-start justify-between py-1.5 border-b border-blue-100 last:border-0">
+                    <span className="text-sm font-semibold text-gray-700">Original Name:</span>
+                    <span className="text-sm text-blue-600 truncate max-w-64 text-right" title={details.metadata.originalName}>
+                      {details.metadata.originalName}
+                    </span>
+                  </div>
+                )}
+                
+                {details.metadata?.size && (
+                  <div className="flex items-center justify-between py-1.5 border-b border-blue-100 last:border-0">
+                    <span className="text-sm font-semibold text-gray-700">File Size:</span>
+                    <span className="text-sm text-blue-700 font-medium bg-blue-50 px-3 py-1 rounded-lg">
+                      {formatFileSize(details.metadata.size)}
+                    </span>
+                  </div>
+                )}
+                
+                {details.metadata?.filename && (
+                  <div className="flex items-start justify-between py-1.5">
+                    <span className="text-sm font-semibold text-gray-700">Saved As:</span>
+                    <span className="text-sm text-blue-600 truncate max-w-64 text-right" title={details.metadata.filename}>
+                      {details.metadata.filename}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
-        <div className="flex justify-end p-6 border-t border-gray-200">
+        <div className="flex gap-3 px-8 pb-8 pt-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex-1 px-6 py-3 bg-linear-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            Close
+            Got it, Thanks!
           </button>
         </div>
+
+        {/* Close button */}
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full p-2 transition-all duration-200"
+          aria-label="Close modal"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
+
+      <style>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        
+        .animate-fadeIn {
+          animation: fadeIn 0.2s ease-out;
+        }
+        
+        .animate-slideUp {
+          animation: slideUp 0.3s ease-out;
+        }
+      `}</style>
     </div>
   );
 };
