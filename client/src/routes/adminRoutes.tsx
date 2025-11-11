@@ -4,6 +4,8 @@ import ProjectsPage from '../pages/admin/ProjectsPage';
 import PlotsPage from '../pages/admin/PlotsPage';
 import CommercialPage from '../pages/admin/CommercialPage';
 import ResidentialPage from '../pages/admin/ResidentialPage';
+import EditProjectPage from '../pages/admin/EditProjectPage';
+import ViewProjectPage from '../pages/admin/ViewProjectPage';
 import ProjectTreePage from '../pages/admin/ProjectTreePage';
 import BlogsPage from '../pages/admin/BlogsPage';
 import RouteGuard from '../components/RouteGuard';
@@ -11,7 +13,7 @@ import Layout from '../components/Layout';
 
 export const adminRoutes: RouteObject[] = [
   {
-    path: "/",
+    path: "/admin",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Banner Management">
@@ -21,7 +23,7 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/projects",
+    path: "/admin/projects",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Projects">
@@ -31,7 +33,27 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/projects/plots",
+    path: "/admin/projects/view/:id",
+    element: (
+      <RouteGuard requireAuth={true}>
+        <Layout title="View Project">
+          <ViewProjectPage />
+        </Layout>
+      </RouteGuard>
+    ),
+  },
+  {
+    path: "/admin/projects/edit/:id",
+    element: (
+      <RouteGuard requireAuth={true}>
+        <Layout title="Edit Project">
+          <EditProjectPage />
+        </Layout>
+      </RouteGuard>
+    ),
+  },
+  {
+    path: "/admin/projects/plots",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Plots">
@@ -41,7 +63,7 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/projects/commercial",
+    path: "/admin/projects/commercial",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Commercial Projects">
@@ -51,7 +73,7 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/projects/residential",
+    path: "/admin/projects/residential",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Residential Projects">
@@ -61,7 +83,7 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/project-tree",
+    path: "/admin/project-tree",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Project Tree">
@@ -71,7 +93,7 @@ export const adminRoutes: RouteObject[] = [
     ),
   },
   {
-    path: "/blogs",
+    path: "/admin/blogs",
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Blogs">

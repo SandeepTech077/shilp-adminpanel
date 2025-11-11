@@ -17,7 +17,7 @@ export interface SubNavLink {
 export const navigationLinks: NavLink[] = [
   {
     name: 'Banner Page',
-    href: '/',
+    href: '/admin',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -31,7 +31,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Projects',
-    href: '/projects',
+    href: '/admin/projects',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -45,7 +45,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Plots',
-    href: '/projects/plots',
+    href: '/admin/projects/plots',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -59,7 +59,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Commercial',
-    href: '/projects/commercial',
+    href: '/admin/projects/commercial',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -73,7 +73,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Residential',
-    href: '/projects/residential',
+    href: '/admin/projects/residential',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -87,7 +87,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Project Tree',
-    href: '/project-tree',
+    href: '/admin/project-tree',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path
@@ -101,7 +101,7 @@ export const navigationLinks: NavLink[] = [
   },
   {
     name: 'Blogs',
-    href: '/blogs',
+    href: '/admin/blogs',
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path

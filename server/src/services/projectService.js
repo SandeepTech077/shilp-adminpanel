@@ -347,6 +347,16 @@ class ProjectService {
         if (existingProject && existingProject.aboutUsDetail && existingProject.aboutUsDetail.image && existingProject.aboutUsDetail.image.url) {
           await this.deleteFile(existingProject.aboutUsDetail.image.url);
         }
+      } else if (data.deleteAboutImage === 'true' && existingProject) {
+        // User wants to delete the about us image
+        if (existingProject.aboutUsDetail && existingProject.aboutUsDetail.image && existingProject.aboutUsDetail.image.url) {
+          await this.deleteFile(existingProject.aboutUsDetail.image.url);
+          console.log('🔍 Service: Deleted about us image');
+        }
+        // Clear the image URL but preserve alt text and descriptions
+        if (processedData.aboutUsDetail && processedData.aboutUsDetail.image) {
+          processedData.aboutUsDetail.image.url = '';
+        }
       } else {
         // No image uploaded, ensure aboutUsDetail structure exists
         if (processedData.aboutUsDetail) {

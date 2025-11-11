@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, Save, Upload, X, Image as ImageIcon } from 'lucide-react';
-import { API_CONFIG } from '../../api/config';
+import { projectApi } from '../../api/project/projectApi';
 import SuccessModal from '../../components/modals/SuccessModal';
 import { FormField, SelectField, TextAreaField, ImageUploadField, FloorPlanCard, ProjectImageCard, AmenityCard } from '../../components/admin/projects';
 
@@ -585,23 +585,15 @@ const ProjectAdminForm = () => {
     }
     
     try {
-      const response = await fetch(`${API_CONFIG.BASE_URL}/api/projects`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('adminToken')}`,
-        },
-        body: formDataToSend,
-      });
+      const result = await projectApi.createProject(formDataToSend);
       
-  if (response.ok) {
-  await response.json();
-  
-  // Clear any previous validation errors
-  setValidationErrors({});
-  
-  // Show success modal
-  setSuccessMessage(`Project "${formData.projectTitle}" created successfully!`);
-  setShowSuccessModal(true);
+      if (result.success) {
+        // Clear any previous validation errors
+        setValidationErrors({});
+        
+        // Show success modal
+        setSuccessMessage(`Project "${formData.projectTitle}" created successfully!`);
+        setShowSuccessModal(true);
         
         // Reset form after successful submission
         setFormData({
@@ -662,14 +654,13 @@ const ProjectAdminForm = () => {
           reraNumber: '',
         });
       } else {
-        const errorData = await response.json();
-        console.error('Error creating project:', errorData);
+        console.error('Error creating project:', result);
         
         // Parse validation errors from backend
-        if (errorData.errors && Array.isArray(errorData.errors)) {
+        if (result.errors && Array.isArray(result.errors)) {
           // Backend returns array of errors: [{ path: 'fieldName', msg: 'Error message' }]
           const errorsMap: Record<string, string> = {};
-          errorData.errors.forEach((err: { path?: string; msg: string; param?: string }) => {
+          result.errors.forEach((err: { path?: string; msg: string; param?: string }) => {
             const fieldName = err.path || err.param;
             if (fieldName) {
               errorsMap[fieldName] = err.msg;
@@ -678,13 +669,13 @@ const ProjectAdminForm = () => {
           setValidationErrors(errorsMap);
           
           // Show error alert with field-specific errors
-          const errorMessages = errorData.errors.map((err: { path?: string; msg: string; param?: string }) => 
+          const errorMessages = result.errors.map((err: { path?: string; msg: string; param?: string }) => 
             `${err.path || err.param}: ${err.msg}`
           ).join('\n');
           alert(`Validation Errors:\n\n${errorMessages}`);
         } else {
           // Generic error
-          alert(`Error creating project: ${errorData.message || 'Unknown error'} ❌`);
+          alert(`Error creating project: ${result.message || 'Unknown error'} ❌`);
         }
       }
     } catch (error) {

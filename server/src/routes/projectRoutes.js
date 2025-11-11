@@ -87,74 +87,20 @@ const handleMulterError = (err, req, res, next) => {
 
 /**
  * @route   GET /api/projects
- * @desc    Get all active projects with filtering and pagination
+ * @desc    Get all projects with filtering by type
  * @access  Public
- * @query   page, limit, sort, order, state, type, search
+ * @query   type (residential, commercial, plot) - optional
  */
 router.get('/', 
-  projectValidation.queryParams,
   projectController.getAllProjects
 );
 
 /**
- * @route   GET /api/projects/stats
- * @desc    Get project statistics
- * @access  Public
- */
-router.get('/stats', projectController.getProjectStats);
-
-/**
- * @route   GET /api/projects/search
- * @desc    Search projects
- * @access  Public
- * @query   q (search term), limit
- */
-router.get('/search', 
-  projectValidation.queryParams,
-  projectController.searchProjects
-);
-
-/**
- * @route   GET /api/projects/state/:state
- * @desc    Get projects by state (on-going, completed)
- * @access  Public
- * @query   limit
- */
-router.get('/state/:state', 
-  projectValidation.projectState,
-  projectValidation.queryParams,
-  projectController.getProjectsByState
-);
-
-/**
- * @route   GET /api/projects/type/:type
- * @desc    Get projects by type (residential, commercial, plot)
- * @access  Public
- * @query   limit
- */
-router.get('/type/:type', 
-  projectValidation.projectType,
-  projectValidation.queryParams,
-  projectController.getProjectsByType
-);
-
-/**
- * @route   GET /api/projects/slug/:slug
- * @desc    Get project by slug
- * @access  Public
- */
-router.get('/slug/:slug', 
-  projectValidation.projectSlug,
-  projectController.getProjectBySlug
-);
-
-/**
  * @route   GET /api/projects/:id
- * @desc    Get project by ID
+ * @desc    Get a single project by ID
  * @access  Public
  */
-router.get('/:id', 
-  projectValidation.projectId,
+router.get('/:id',
   projectController.getProjectById
 );
 
@@ -177,14 +123,13 @@ router.post('/',
 
 /**
  * @route   PUT /api/projects/:id
- * @desc    Update project by ID
+ * @desc    Update an existing project
  * @access  Private (Admin only)
  * @files   brochure, aboutUsImage, floorPlanImages, projectImageFiles, amenityFiles, updatedImageFiles, cardImage
  */
-router.put('/:id', 
+router.put('/:id',
   adminAuth.verifyToken,
   adminAuth.requirePermission('projects.update'),
-  projectValidation.projectId,
   uploadFields,
   handleMulterError,
   projectValidation.updateProject,
@@ -193,14 +138,12 @@ router.put('/:id',
 
 /**
  * @route   DELETE /api/projects/:id
- * @desc    Delete project by ID (soft delete by default, permanent if ?permanent=true)
+ * @desc    Delete a project and all its files
  * @access  Private (Admin only)
- * @query   permanent (boolean)
  */
-router.delete('/:id', 
+router.delete('/:id',
   adminAuth.verifyToken,
   adminAuth.requirePermission('projects.delete'),
-  projectValidation.projectId,
   projectController.deleteProject
 );
 

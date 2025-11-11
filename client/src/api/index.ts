@@ -3,13 +3,13 @@ export { httpClient, API_CONFIG, ApiError } from './config';
 export type { ApiResponse } from './config';
 
 // Admin API
-export { AdminApi } from './adminLoginApi';
+export { AdminApi } from './admin/adminApi';
 export type {
   AdminLoginRequest,
   AdminLoginResponse,
   AdminVerifyTokenResponse,
   AdminProfileResponse,
-} from './adminLoginApi';
+} from './admin/adminApi';
 
 // Banner API - Individual functions
 export { 
@@ -17,16 +17,20 @@ export {
   uploadBannerImage, 
   updateBannerAlt, 
   deleteBannerImage 
-} from './bannerApi';
+} from './banner/bannerApi';
 export type {
   BannerMetadata,
   BannerSection,
   BannersData,
   BannerApiResponse,
-} from './bannerApi';
+} from './banner/bannerApi';
+
+// Project API
+export { projectApi, createProject, getProjects, getProjectById, updateProject, deleteProject } from './project/projectApi';
+export type { CreateProjectResponse, GetProjectsResponse, Project } from './project/projectApi';
 
 // Image utilities
-export { getImageUrl, isImageAccessible, formatFileSize, formatUploadDate } from './imageUtils';
+export { getImageUrl, isImageAccessible, formatFileSize, formatUploadDate } from './utils/imageUtils';
 
 // Import ApiError for internal use in utilities
 import { ApiError } from './config';
@@ -76,9 +80,6 @@ export const apiUtils = {
     return false;
   },
 };
-
-// Project API
-export * from './projectApi';
 
 export default {
   apiUtils,

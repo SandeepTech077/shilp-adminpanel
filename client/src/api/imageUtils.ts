@@ -1,3 +1,4 @@
+import axios from 'axios';
 
 /**
  * Get base URL from environment or fallback for image loading
@@ -8,11 +9,11 @@ const getImageBaseUrl = (): string => {
   
   if (isDev) {
     // In development, use frontend URL (images served via proxy)
-    const devPort = import.meta.env.VITE_DEV_PORT 
+    const devPort = import.meta.env.VITE_DEV_PORT || '5174';
     return `http://localhost:${devPort}`;
   } else {
     // In production, use configured image base URL (still frontend)
-    return import.meta.env.VITE_IMAGE_BASE_URL 
+    return import.meta.env.VITE_IMAGE_BASE_URL || window.location.origin;
   }
 };
 
@@ -71,8 +72,8 @@ export const isImageAccessible = async (imageUrl: string): Promise<boolean> => {
   if (!imageUrl) return false;
   
   try {
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    return response.ok;
+    const response = await axios.head(imageUrl);
+    return response.status >= 200 && response.status < 300;
   } catch {
     return false;
   }

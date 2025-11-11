@@ -6,7 +6,7 @@ export const ROUTES = {
   // Admin routes
   ADMIN: {
     LOGIN: '/login',
-    DASHBOARD: '/', // BannerPage is the admin dashboard
+    DASHBOARD: '/admin', // BannerPage is the admin dashboard
   },
 } as const;
 

@@ -412,9 +412,7 @@ const projectValidation = {
 
     body('reraNumber')
       .optional()
-      .trim()
-      .isLength({ max: 100 })
-      .withMessage('RERA number cannot exceed 100 characters'),
+      .trim(),
   ],
 
   // Validation for project ID parameter
