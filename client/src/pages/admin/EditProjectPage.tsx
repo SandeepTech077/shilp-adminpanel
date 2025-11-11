@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { getProjectById, updateProject } from '../../api';
 import { getImageUrl } from '../../api/imageUtils';
 import SuccessModal from '../../components/modals/SuccessModal';
+import { Toast } from '../../components/modals';
 import { ArrowLeft, Upload, X, FileText, Plus } from 'lucide-react';
 
 // Types matching ProjectsPage structure
@@ -112,6 +113,11 @@ export default function EditProjectPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
   
   const [formData, setFormData] = useState<ProjectFormData>({
     projectTitle: '',
@@ -276,8 +282,8 @@ export default function EditProjectPage() {
     load();
   }, [id]);
 
-  // Input change handlers
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Input change handlers - optimized with useCallback to prevent re-renders
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     
     if (type === 'checkbox') {
@@ -288,10 +294,10 @@ export default function EditProjectPage() {
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
-  };
+  }, []);
 
-  // About Image handlers
-  const handleAboutImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // About Image handlers - optimized
+  const handleAboutImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setFormData(prev => ({
@@ -300,19 +306,19 @@ export default function EditProjectPage() {
         deleteAboutImage: false,
       }));
     }
-  };
+  }, []);
 
-  const handleRemoveAboutImage = () => {
+  const handleRemoveAboutImage = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       aboutImage: null,
       existingAboutImage: undefined,
       deleteAboutImage: true,
     }));
-  };
+  }, []);
 
-  // Card Image handlers
-  const handleCardImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Card Image handlers - optimized
+  const handleCardImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const preview = URL.createObjectURL(file);
@@ -323,9 +329,9 @@ export default function EditProjectPage() {
         deleteCardImage: false,
       }));
     }
-  };
+  }, []);
 
-  const handleRemoveCardImage = () => {
+  const handleRemoveCardImage = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       cardImage: null,
@@ -333,10 +339,10 @@ export default function EditProjectPage() {
       existingCardImage: undefined,
       deleteCardImage: true,
     }));
-  };
+  }, []);
 
-  // Brochure handlers
-  const handleBrochureChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Brochure handlers - optimized
+  const handleBrochureChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData(prev => ({
         ...prev,
@@ -344,152 +350,160 @@ export default function EditProjectPage() {
         deleteBrochure: false,
       }));
     }
-  };
+  }, []);
 
-  const handleRemoveBrochure = () => {
+  const handleRemoveBrochure = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       brochure: null,
       existingBrochure: undefined,
       deleteBrochure: true,
     }));
-  };
+  }, []);
 
-  // Floor Plans handlers
-  const handleAddFloorPlan = () => {
+  // Floor Plans handlers - optimized
+  const handleAddFloorPlan = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       floorPlans: [...prev.floorPlans, { id: Date.now().toString(), title: '', image: '', alt: '' }],
     }));
-  };
+  }, []);
 
-  const handleRemoveFloorPlan = (id: string, isExisting?: boolean) => {
+  const handleRemoveFloorPlan = useCallback((id: string, isExisting?: boolean) => {
     setFormData(prev => ({
       ...prev,
       floorPlans: prev.floorPlans.filter(fp => fp.id !== id),
       deleteFloorPlans: isExisting ? [...prev.deleteFloorPlans, id] : prev.deleteFloorPlans,
     }));
-  };
+  }, []);
 
-  const handleFloorPlanChange = (id: string, field: 'title' | 'alt', value: string) => {
+  const handleFloorPlanChange = useCallback((id: string, field: 'title' | 'alt', value: string) => {
     setFormData(prev => ({
       ...prev,
       floorPlans: prev.floorPlans.map(fp => (fp.id === id ? { ...fp, [field]: value } : fp)),
     }));
-  };
+  }, []);
 
-  const handleFloorPlanImageChange = (id: string, file: File) => {
+  const handleFloorPlanImageChange = useCallback((id: string, file: File) => {
     const preview = URL.createObjectURL(file);
     setFormData(prev => ({
       ...prev,
       floorPlans: prev.floorPlans.map(fp => (fp.id === id ? { ...fp, file, preview } : fp)),
     }));
-  };
+  }, []);
 
-  // Project Images (Gallery) handlers
-  const handleAddProjectImage = () => {
-    if (formData.projectImages.length >= 5) {
-      alert('Maximum 5 project images allowed');
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      projectImages: [...prev.projectImages, { id: Date.now().toString(), image: '', alt: '' }],
-    }));
-  };
+  // Project Images (Gallery) handlers - optimized
+  const handleAddProjectImage = useCallback(() => {
+    setFormData(prev => {
+      if (prev.projectImages.length >= 5) {
+        setToastMessage('Maximum 5 project images allowed');
+        setToastType('warning');
+        setShowToast(true);
+        return prev;
+      }
+      return {
+        ...prev,
+        projectImages: [...prev.projectImages, { id: Date.now().toString(), image: '', alt: '' }],
+      };
+    });
+  }, []);
 
-  const handleRemoveProjectImage = (id: string, isExisting?: boolean) => {
+  const handleRemoveProjectImage = useCallback((id: string, isExisting?: boolean) => {
     setFormData(prev => ({
       ...prev,
       projectImages: prev.projectImages.filter(img => img.id !== id),
       deleteProjectImages: isExisting ? [...prev.deleteProjectImages, id] : prev.deleteProjectImages,
     }));
-  };
+  }, []);
 
-  const handleProjectImageChange = (id: string, field: 'alt', value: string) => {
+  const handleProjectImageChange = useCallback((id: string, field: 'alt', value: string) => {
     setFormData(prev => ({
       ...prev,
       projectImages: prev.projectImages.map(img => (img.id === id ? { ...img, [field]: value } : img)),
     }));
-  };
+  }, []);
 
-  const handleProjectImageFileChange = (id: string, file: File) => {
+  const handleProjectImageFileChange = useCallback((id: string, file: File) => {
     const preview = URL.createObjectURL(file);
     setFormData(prev => ({
       ...prev,
       projectImages: prev.projectImages.map(img => (img.id === id ? { ...img, file, preview } : img)),
     }));
-  };
+  }, []);
 
-  // Amenities handlers
-  const handleAddAmenity = () => {
+  // Amenities handlers - optimized
+  const handleAddAmenity = useCallback(() => {
     setFormData(prev => ({
       ...prev,
       amenities: [...prev.amenities, { id: Date.now().toString(), title: '', svgOrImage: '', alt: '' }],
     }));
-  };
+  }, []);
 
-  const handleRemoveAmenity = (id: string, isExisting?: boolean) => {
+  const handleRemoveAmenity = useCallback((id: string, isExisting?: boolean) => {
     setFormData(prev => ({
       ...prev,
       amenities: prev.amenities.filter(am => am.id !== id),
       deleteAmenities: isExisting ? [...prev.deleteAmenities, id] : prev.deleteAmenities,
     }));
-  };
+  }, []);
 
-  const handleAmenityChange = (id: string, field: 'title' | 'alt', value: string) => {
+  const handleAmenityChange = useCallback((id: string, field: 'title' | 'alt', value: string) => {
     setFormData(prev => ({
       ...prev,
       amenities: prev.amenities.map(am => (am.id === id ? { ...am, [field]: value } : am)),
     }));
-  };
+  }, []);
 
-  const handleAmenityImageChange = (id: string, file: File) => {
+  const handleAmenityImageChange = useCallback((id: string, file: File) => {
     const preview = URL.createObjectURL(file);
     setFormData(prev => ({
       ...prev,
       amenities: prev.amenities.map(am => (am.id === id ? { ...am, file, preview } : am)),
     }));
-  };
+  }, []);
 
-  // Updated Images handlers
-  const handleAddUpdatedImage = () => {
-    if (formData.updatedImages.length >= 3) {
-      alert('Maximum 3 updated images allowed');
-      return;
-    }
-    setFormData(prev => ({
-      ...prev,
-      updatedImages: [...prev.updatedImages, { id: Date.now().toString(), image: '', alt: '' }],
-    }));
-  };
+  // Updated Images handlers - optimized
+  const handleAddUpdatedImage = useCallback(() => {
+    setFormData(prev => {
+      if (prev.updatedImages.length >= 3) {
+        setToastMessage('Maximum 3 updated images allowed');
+        setToastType('warning');
+        setShowToast(true);
+        return prev;
+      }
+      return {
+        ...prev,
+        updatedImages: [...prev.updatedImages, { id: Date.now().toString(), image: '', alt: '' }],
+      };
+    });
+  }, []);
 
-  const handleRemoveUpdatedImage = (id: string, isExisting?: boolean) => {
+  const handleRemoveUpdatedImage = useCallback((id: string, isExisting?: boolean) => {
     setFormData(prev => ({
       ...prev,
       updatedImages: prev.updatedImages.filter(img => img.id !== id),
       deleteUpdatedImages: isExisting ? [...prev.deleteUpdatedImages, id] : prev.deleteUpdatedImages,
     }));
-  };
+  }, []);
 
-  const handleUpdatedImageChange = (id: string, field: 'alt', value: string) => {
+  const handleUpdatedImageChange = useCallback((id: string, field: 'alt', value: string) => {
     setFormData(prev => ({
       ...prev,
       updatedImages: prev.updatedImages.map(img => (img.id === id ? { ...img, [field]: value } : img)),
     }));
-  };
+  }, []);
 
-  const handleUpdatedImageFileChange = (id: string, file: File) => {
+  const handleUpdatedImageFileChange = useCallback((id: string, file: File) => {
     const preview = URL.createObjectURL(file);
     setFormData(prev => ({
       ...prev,
       updatedImages: prev.updatedImages.map(img => (img.id === id ? { ...img, file, preview } : img)),
     }));
-  };
+  }, []);
 
 
-  // Form submission
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Form submission - optimized
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!id) {
@@ -637,7 +651,7 @@ export default function EditProjectPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [id, formData, navigate]);
 
   if (loading) {
     return (
@@ -1557,6 +1571,15 @@ export default function EditProjectPage() {
         onClose={() => setShowSuccess(false)}
         title="Success!"
         message="Project updated successfully!"
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        isOpen={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        duration={4000}
       />
     </div>
   );

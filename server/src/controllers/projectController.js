@@ -299,7 +299,7 @@ class ProjectController {
   async deleteProject(req, res) {
     try {
       const { id } = req.params;
-      const { permanent = false } = req.query;
+      const { permanent = true } = req.query; // Default to permanent delete
       
       if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
         return res.status(400).json({
@@ -316,6 +316,43 @@ class ProjectController {
       res.status(statusCode).json({
         success: false,
         message: error.message || 'Failed to delete project',
+        error: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+  }
+
+  /**
+   * Toggle project active status
+   * @param {Object} req - Express request object
+   * @param {Object} res - Express response object
+   */
+  async toggleProjectStatus(req, res) {
+    try {
+      const { id } = req.params;
+      const { isActive } = req.body;
+      
+      if (!id || !id.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid project ID format'
+        });
+      }
+
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({
+          success: false,
+          message: 'isActive must be a boolean value'
+        });
+      }
+
+      const result = await projectService.toggleProjectStatus(id, isActive);
+      res.json(result);
+    } catch (error) {
+      console.error('Toggle status error:', error);
+      const statusCode = error.message === 'Project not found' ? 404 : 500;
+      res.status(statusCode).json({
+        success: false,
+        message: error.message || 'Failed to toggle project status',
         error: process.env.NODE_ENV === 'development' ? error.stack : undefined
       });
     }

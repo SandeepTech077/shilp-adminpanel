@@ -56,7 +56,8 @@ class ProjectRepository {
       } = options;
 
       const skip = (page - 1) * limit;
-      const query = { isActive: true, ...filter };
+      // Admin panel: Show all projects (active and inactive)
+      const query = { ...filter };
 
       const [projects, total] = await Promise.all([
         Project.find(query)

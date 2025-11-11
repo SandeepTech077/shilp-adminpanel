@@ -250,6 +250,31 @@ class ProjectService {
   }
 
   /**
+   * Toggle project active status
+   * @param {string} id - Project ID
+   * @param {boolean} isActive - New active status
+   * @returns {Promise<Object>} Update result
+   */
+  async toggleProjectStatus(id, isActive) {
+    try {
+      const project = await projectRepository.findById(id);
+      if (!project) {
+        throw new Error('Project not found');
+      }
+
+      const updatedProject = await projectRepository.update(id, { isActive });
+      
+      return {
+        success: true,
+        message: `Project ${isActive ? 'activated' : 'deactivated'} successfully`,
+        data: updatedProject
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
    * Search projects
    * @param {string} searchTerm - Search term
    * @param {Object} options - Search options

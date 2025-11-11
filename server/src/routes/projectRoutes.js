@@ -147,6 +147,17 @@ router.delete('/:id',
   projectController.deleteProject
 );
 
+/**
+ * @route   PATCH /api/projects/:id/toggle-status
+ * @desc    Toggle project active/inactive status
+ * @access  Private (Admin only)
+ */
+router.patch('/:id/toggle-status',
+  adminAuth.verifyToken,
+  adminAuth.requirePermission('projects.update'),
+  projectController.toggleProjectStatus
+);
+
 // Error handling middleware
 router.use((err, req, res, next) => {
   console.error('Project routes error:', err);

@@ -290,6 +290,33 @@ export const deleteProject = async (projectId: string): Promise<{ success: boole
   }
 };
 
+/**
+ * Toggle project active status
+ */
+export const toggleProjectStatus = async (projectId: string, isActive: boolean): Promise<{ success: boolean; message?: string; data?: Project }> => {
+  try {
+    const response = await projectApiClient.patch(`/api/projects/${projectId}/toggle-status`, { isActive });
+    
+    return {
+      success: true,
+      message: response.data.message || 'Project status updated successfully',
+      data: response.data.data,
+    };
+  } catch (error: unknown) {
+    console.error('Toggle status error:', error);
+    const errorMessage = axios.isAxiosError(error)
+      ? error.response?.data?.message || error.message
+      : error instanceof Error 
+      ? error.message 
+      : 'Network error occurred';
+    
+    return {
+      success: false,
+      message: errorMessage,
+    };
+  }
+};
+
 // Export default object for easier imports
 export const projectApi = {
   getProjects,
@@ -297,6 +324,7 @@ export const projectApi = {
   createProject,
   updateProject,
   deleteProject,
+  toggleProjectStatus,
 };
 
 export default projectApi;

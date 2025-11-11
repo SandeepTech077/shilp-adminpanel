@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const bannerRoutes = require('./routes/bannerRoutes'); // Added bannerRoutes require
 const projectRoutes = require('./routes/projectRoutes'); // Added projectRoutes require
+const projectTreeRoutes = require('./routes/projectTreeRoutes'); // Added projectTreeRoutes require
 require('dotenv').config();
 
 const { connectDatabase } = require('./config/database');
@@ -44,11 +45,26 @@ app.use(express.urlencoded({ extended: true }));
 const uploadDir = process.env.UPLOAD_DIR || 'uploads';
 app.use('/uploads', (req, res, next) => {
   // Set CORS headers for static files
-  res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5174');
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'http://localhost:5174',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    process.env.CORS_ORIGIN
+  ].filter(Boolean);
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || 'http://localhost:5174');
+  }
+  
   res.header('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Cache-Control', 'no-cache'); // Prevent caching issues
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'unsafe-none');
+  res.header('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
   
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
@@ -56,13 +72,14 @@ app.use('/uploads', (req, res, next) => {
     return;
   }
   
-  // Image requests are proxied/served here. Removed verbose logging in production.
-  
   next();
 }, express.static(uploadDir, {
   // Add 404 handling for missing files
   fallthrough: false,
-  maxAge: 0 // No caching
+  setHeaders: (res, path) => {
+    // Additional headers for static files
+    res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  }
 }));
 
 // Add 404 handler for missing upload files
@@ -83,6 +100,7 @@ app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/banners', bannerRoutes); // Mount banner routes with proper API prefix
 app.use('/api/projects', projectRoutes); // Mount project routes with proper API prefix
+app.use('/api/projecttree', projectTreeRoutes); // Mount project tree routes with proper API prefix
 const startServer = async () => {
   try {
     // Connect to database

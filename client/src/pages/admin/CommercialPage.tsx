@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, deleteProject, type Project } from '../../api/project/projectApi';
+import { getProjects, deleteProject, toggleProjectStatus, type Project } from '../../api/project/projectApi';
+import { getImageUrl } from '../../api/imageUtils';
+import { Toast } from '../../components/modals';
+import DeleteConfirmModal from '../../components/admin/projectTree/DeleteConfirmModal';
 import { Eye, Edit, Trash2, MapPin, Calendar, Building2 } from 'lucide-react';
 
 const CommercialPage: React.FC = () => {
@@ -8,6 +11,16 @@ const CommercialPage: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     fetchCommercialProjects();
@@ -42,20 +55,60 @@ const CommercialPage: React.FC = () => {
     navigate(`/admin/projects/view/${projectId}`);
   };
 
-  const handleDelete = async (projectId: string, projectTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete "${projectTitle}"?\n\nThis will permanently delete all project files and data.`)) {
-      try {
-        const response = await deleteProject(projectId);
-        if (response.success) {
-          await fetchCommercialProjects();
-          alert(`Project "${projectTitle}" deleted successfully!`);
-        } else {
-          alert(`Failed to delete project: ${response.message}`);
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('An error occurred while deleting the project');
+  const handleToggleStatus = async (projectId: string, currentStatus: boolean) => {
+    setTogglingStatus(projectId);
+    try {
+      const response = await toggleProjectStatus(projectId, !currentStatus);
+      if (response.success) {
+        setProjects(prev => prev.map(p => 
+          p._id === projectId ? { ...p, isActive: !currentStatus } : p
+        ));
+        setToastMessage(`Project status updated successfully`);
+        setToastType('success');
+        setShowToast(true);
+      } else {
+        setToastMessage(`Failed to update status: ${response.message}`);
+        setToastType('error');
+        setShowToast(true);
       }
+    } catch (error) {
+      console.error('Toggle status error:', error);
+      setToastMessage('An error occurred while updating status');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setTogglingStatus(null);
+    }
+  };
+
+  const handleDelete = (projectId: string, projectTitle: string) => {
+    setDeleteTarget({ id: projectId, title: projectTitle });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      const response = await deleteProject(deleteTarget.id);
+      if (response.success) {
+        await fetchCommercialProjects();
+        setToastMessage(`Project "${deleteTarget.title}" deleted successfully!`);
+        setToastType('success');
+        setShowToast(true);
+      } else {
+        setToastMessage(`Failed to delete project: ${response.message}`);
+        setToastType('error');
+        setShowToast(true);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      setToastMessage('An error occurred while deleting the project');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setShowDeleteModal(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -143,9 +196,13 @@ const CommercialPage: React.FC = () => {
                       <div className="flex items-center">
                         {project.cardImage && (
                           <img
-                            src={project.cardImage}
+                            src={getImageUrl(project.cardImage)}
                             alt={project.projectTitle}
                             className="h-10 w-10 rounded-lg object-cover mr-3"
+                            onError={(e) => {
+                              console.error('Failed to load image:', project.cardImage);
+                              e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="40" height="40"%3E%3Crect fill="%23ddd" width="40" height="40"/%3E%3C/svg%3E';
+                            }}
                           />
                         )}
                         <div>
@@ -188,27 +245,43 @@ const CommercialPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={() => handleView(project._id)}
-                          className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="text-blue-600 hover:text-blue-900 p-2.5 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View Details"
                         >
-                          <Eye size={18} />
+                          <Eye size={20} />
                         </button>
                         <button
                           onClick={() => handleEdit(project._id)}
-                          className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                          className="text-green-600 hover:text-green-900 p-2.5 hover:bg-green-50 rounded-lg transition-colors"
                           title="Edit Project"
                         >
-                          <Edit size={18} />
+                          <Edit size={20} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(project._id, project.isActive)}
+                          disabled={togglingStatus === project._id}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                            project.isActive 
+                              ? 'bg-green-500 hover:bg-green-600' 
+                              : 'bg-gray-300 hover:bg-gray-400'
+                          } ${togglingStatus === project._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={project.isActive ? 'Click to Deactivate' : 'Click to Activate'}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                              project.isActive ? 'translate-x-7' : 'translate-x-1'
+                            }`}
+                          />
                         </button>
                         <button
                           onClick={() => handleDelete(project._id, project.projectTitle)}
-                          className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete Project"
+                          className="text-red-600 hover:text-red-900 p-2.5 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Project & Files"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={20} />
                         </button>
                       </div>
                     </td>
@@ -219,6 +292,28 @@ const CommercialPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && deleteTarget && (
+        <DeleteConfirmModal
+          isOpen={showDeleteModal}
+          onClose={() => {
+            setShowDeleteModal(false);
+            setDeleteTarget(null);
+          }}
+          onConfirm={confirmDelete}
+          title={`Delete "${deleteTarget.title}"?`}
+          message="All project images and data will be permanently deleted. This action cannot be undone."
+        />
+      )}
+
+      {/* Toast Notification */}
+      <Toast
+        isOpen={showToast}
+        message={toastMessage}
+        type={toastType}
+        onClose={() => setShowToast(false)}
+      />
     </div>
   );
 };

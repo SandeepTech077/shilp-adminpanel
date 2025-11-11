@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, Save, Upload, X, Image as ImageIcon } from 'lucide-react';
 import { projectApi } from '../../api/project/projectApi';
 import SuccessModal from '../../components/modals/SuccessModal';
+import { Toast } from '../../components/modals';
 import { FormField, SelectField, TextAreaField, ImageUploadField, FloorPlanCard, ProjectImageCard, AmenityCard } from '../../components/admin/projects';
 
 type ProjectState = 'on-going' | 'completed';
@@ -144,6 +145,11 @@ const ProjectAdminForm = () => {
   // Success modal state
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
   
   // Removed verbose console logging for form data
 
@@ -330,7 +336,9 @@ const ProjectAdminForm = () => {
   // Project Images (Max 5)
   const addProjectImage = () => {
     if (formData.projectImages.length >= 5) {
-      alert('Maximum 5 images allowed!');
+      setToastMessage('Maximum 5 images allowed!');
+      setToastType('warning');
+      setShowToast(true);
       return;
     }
     setFormData(prev => ({
@@ -408,7 +416,9 @@ const ProjectAdminForm = () => {
   // Updated Images (Max 3)
   const addUpdatedImage = () => {
     if (formData.updatedImages.length >= 3) {
-      alert('Maximum 3 images allowed!');
+      setToastMessage('Maximum 3 images allowed!');
+      setToastType('warning');
+      setShowToast(true);
       return;
     }
     setFormData(prev => ({
@@ -502,7 +512,9 @@ const ProjectAdminForm = () => {
     
     // Show validation errors
     if (errors.length > 0) {
-      alert('Please fix the following errors:\n\n' + errors.join('\n'));
+      setToastMessage('Please fix the following errors:\n\n' + errors.join('\n'));
+      setToastType('error');
+      setShowToast(true);
       return;
     }
     
@@ -668,19 +680,25 @@ const ProjectAdminForm = () => {
           });
           setValidationErrors(errorsMap);
           
-          // Show error alert with field-specific errors
+          // Show error toast with field-specific errors
           const errorMessages = result.errors.map((err: { path?: string; msg: string; param?: string }) => 
             `${err.path || err.param}: ${err.msg}`
           ).join('\n');
-          alert(`Validation Errors:\n\n${errorMessages}`);
+          setToastMessage(`Validation Errors:\n\n${errorMessages}`);
+          setToastType('error');
+          setShowToast(true);
         } else {
           // Generic error
-          alert(`Error creating project: ${result.message || 'Unknown error'} ❌`);
+          setToastMessage(`Error creating project: ${result.message || 'Unknown error'} ❌`);
+          setToastType('error');
+          setShowToast(true);
         }
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error connecting to server! ❌');
+      setToastMessage('Error connecting to server! ❌');
+      setToastType('error');
+      setShowToast(true);
       setValidationErrors({});
     }
   };
@@ -1340,6 +1358,15 @@ const ProjectAdminForm = () => {
         title="Project Created Successfully! 🎉"
         message={successMessage}
         onClose={() => setShowSuccessModal(false)}
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        isOpen={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        duration={4000}
       />
     </div>
   );

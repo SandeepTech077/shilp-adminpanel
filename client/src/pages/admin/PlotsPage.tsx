@@ -1,14 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getProjects, deleteProject, type Project } from '../../api/project/projectApi';
+import { getProjects, deleteProject, toggleProjectStatus, type Project } from '../../api/project/projectApi';
 import { getImageUrl } from '../../api/imageUtils';
-import { Eye, Edit, Trash2, MapPin, Calendar } from 'lucide-react';
+import { Toast } from '../../components/modals';
+import DeleteConfirmModal from '../../components/admin/projectTree/DeleteConfirmModal';
+import { Eye, Edit, Trash2, MapPin, Calendar, LayoutGrid } from 'lucide-react';
 
 const PlotsPage: React.FC = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
+
+  // Toast notification state
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('info');
+
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     fetchPlotProjects();
@@ -43,21 +55,60 @@ const PlotsPage: React.FC = () => {
     navigate(`/admin/projects/view/${projectId}`);
   };
 
-  const handleDelete = async (projectId: string, projectTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete "${projectTitle}"?\n\nThis will permanently delete all project files and data.`)) {
-      try {
-        const response = await deleteProject(projectId);
-        if (response.success) {
-          // Refresh the list after successful deletion
-          await fetchPlotProjects();
-          alert(`Project "${projectTitle}" deleted successfully!`);
-        } else {
-          alert(`Failed to delete project: ${response.message}`);
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('An error occurred while deleting the project');
+  const handleToggleStatus = async (projectId: string, currentStatus: boolean) => {
+    setTogglingStatus(projectId);
+    try {
+      const response = await toggleProjectStatus(projectId, !currentStatus);
+      if (response.success) {
+        // Update local state
+        setProjects(prev => prev.map(p => 
+          p._id === projectId ? { ...p, isActive: !currentStatus } : p
+        ));
+        setToastMessage(`Status updated successfully!`);
+        setToastType('success');
+        setShowToast(true);
+      } else {
+        setToastMessage(`Failed to update status: ${response.message}`);
+        setToastType('error');
+        setShowToast(true);
       }
+    } catch (error) {
+      console.error('Toggle status error:', error);
+      setToastMessage('An error occurred while updating status');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setTogglingStatus(null);
+    }
+  };
+
+  const handleDelete = (projectId: string, projectTitle: string) => {
+    setDeleteTarget({ id: projectId, title: projectTitle });
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+
+    try {
+      const response = await deleteProject(deleteTarget.id);
+      if (response.success) {
+        await fetchPlotProjects();
+        setToastMessage(`✓ Project "${deleteTarget.title}" and all its files deleted successfully!`);
+        setToastType('success');
+        setShowToast(true);
+      } else {
+        setToastMessage(`Failed to delete project: ${response.message}`);
+        setToastType('error');
+        setShowToast(true);
+      }
+    } catch (error) {
+      console.error('Delete error:', error);
+      setToastMessage('An error occurred while deleting the project');
+      setToastType('error');
+      setShowToast(true);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -91,7 +142,10 @@ const PlotsPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto p-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Plot Projects</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <LayoutGrid className="w-8 h-8 text-blue-600" />
+          <h1 className="text-3xl font-bold text-gray-800">Plot Projects</h1>
+        </div>
         <p className="text-gray-600">
           Manage land plots, their sizes, locations, and availability status.
         </p>
@@ -191,27 +245,43 @@ const PlotsPage: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                      <div className="flex items-center justify-center gap-2">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                           onClick={() => handleView(project._id)}
-                          className="text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded-lg transition-colors"
+                          className="text-blue-600 hover:text-blue-900 p-2.5 hover:bg-blue-50 rounded-lg transition-colors"
                           title="View Details"
                         >
-                          <Eye size={18} />
+                          <Eye size={20} />
                         </button>
                         <button
                           onClick={() => handleEdit(project._id)}
-                          className="text-green-600 hover:text-green-900 p-2 hover:bg-green-50 rounded-lg transition-colors"
+                          className="text-green-600 hover:text-green-900 p-2.5 hover:bg-green-50 rounded-lg transition-colors"
                           title="Edit Project"
                         >
-                          <Edit size={18} />
+                          <Edit size={20} />
+                        </button>
+                        <button
+                          onClick={() => handleToggleStatus(project._id, project.isActive)}
+                          disabled={togglingStatus === project._id}
+                          className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                            project.isActive 
+                              ? 'bg-green-500 hover:bg-green-600' 
+                              : 'bg-gray-300 hover:bg-gray-400'
+                          } ${togglingStatus === project._id ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          title={project.isActive ? 'Click to Deactivate' : 'Click to Activate'}
+                        >
+                          <span
+                            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                              project.isActive ? 'translate-x-7' : 'translate-x-1'
+                            }`}
+                          />
                         </button>
                         <button
                           onClick={() => handleDelete(project._id, project.projectTitle)}
-                          className="text-red-600 hover:text-red-900 p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          title="Delete Project"
+                          className="text-red-600 hover:text-red-900 p-2.5 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete Project & Files"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={20} />
                         </button>
                       </div>
                     </td>
@@ -222,6 +292,27 @@ const PlotsPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeleteTarget(null);
+        }}
+        onConfirm={confirmDelete}
+        title={deleteTarget?.title || ''}
+        message="This will permanently delete the project and all its images. This action cannot be undone."
+      />
+
+      {/* Toast Notification */}
+      <Toast
+        isOpen={showToast}
+        onClose={() => setShowToast(false)}
+        message={toastMessage}
+        type={toastType}
+        duration={3000}
+      />
     </div>
   );
 };
