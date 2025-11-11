@@ -4,7 +4,8 @@ const projectTreeSchema = new mongoose.Schema({
   no: {
     type: Number,
     required: [true, 'Number is required'],
-    unique: true
+    unique: true,
+    index: true
   },
   year: {
     type: Number,
@@ -48,9 +49,8 @@ const projectTreeSchema = new mongoose.Schema({
   versionKey: '__v'
 });
 
-// Index for faster queries
+// Index for faster queries (no index is already created by unique: true)
 projectTreeSchema.index({ year: -1 });
 projectTreeSchema.index({ typeofproject: 1 });
-projectTreeSchema.index({ no: 1 });
 
 module.exports = mongoose.model('ProjectTree', projectTreeSchema);

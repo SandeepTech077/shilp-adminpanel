@@ -6,6 +6,7 @@ const compression = require('compression');
 const bannerRoutes = require('./routes/bannerRoutes'); // Added bannerRoutes require
 const projectRoutes = require('./routes/projectRoutes'); // Added projectRoutes require
 const projectTreeRoutes = require('./routes/projectTreeRoutes'); // Added projectTreeRoutes require
+const blogRoutes = require('./routes/blogRoutes'); // Added blogRoutes require
 require('dotenv').config();
 
 const { connectDatabase } = require('./config/database');
@@ -101,6 +102,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/banners', bannerRoutes); // Mount banner routes with proper API prefix
 app.use('/api/projects', projectRoutes); // Mount project routes with proper API prefix
 app.use('/api/projecttree', projectTreeRoutes); // Mount project tree routes with proper API prefix
+app.use('/api/blogs', blogRoutes); // Mount blog routes with proper API prefix
 const startServer = async () => {
   try {
     // Connect to database

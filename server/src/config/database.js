@@ -7,7 +7,7 @@ const connectDatabase = async () => {
     // credentials in source.
     const dbUrl = process.env.DATABASE_URL 
 
-    await mongoose.connect(dbUrl, { useNewUrlParser: true, useUnifiedTopology: true });
+    await mongoose.connect(dbUrl);
 
   // Connected to MongoDB
 

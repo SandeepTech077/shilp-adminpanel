@@ -61,6 +61,7 @@ const blogSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
+      index: true,
     },
     image: {
       type: String,
@@ -83,8 +84,7 @@ const blogSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
-blogSchema.index({ url: 1 });
+// Index for faster queries (url index is already created by unique: true)
 blogSchema.index({ status: 1 });
 blogSchema.index({ createdAt: -1 });
 

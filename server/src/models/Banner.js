@@ -113,7 +113,8 @@ const bannerSchema = new mongoose.Schema({
   documentId: { 
     type: String, 
     default: 'main-banners', 
-    unique: true 
+    unique: true,
+    index: true
   }
 }, { 
   timestamps: true,
@@ -139,6 +140,6 @@ bannerSchema.pre('save', function(next) {
   next();
 });
 
-bannerSchema.index({ documentId: 1 });
+// Index is already created by unique: true on documentId field
 
 module.exports = mongoose.model('Banner', bannerSchema);
