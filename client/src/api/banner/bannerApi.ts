@@ -73,7 +73,7 @@ export const getBanners = async (): Promise<BannerApiResponse<BannersData>> => {
 // Upload banner image
 export const uploadBannerImage = async (
   section: string,
-  field: 'banner' | 'mobilebanner',
+  field: 'banner' | 'mobilebanner' | 'image' | 'mobileimage',
   file: File,
   alt?: string
 ): Promise<BannerApiResponse> => {
@@ -120,10 +120,29 @@ export const updateBannerAlt = async (
   }
 };
 
+// Update blogsDetail title and description
+export const updateBlogsDetailText = async (
+  title: string,
+  description: string
+): Promise<BannerApiResponse> => {
+  try {
+    const response = await bannerApiClient.put('/api/banners/blogsDetail/text', {
+      title,
+      description,
+    });
+    return response.data;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error 
+      ? error.message 
+      : (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
+    throw new Error(errorMessage || 'Failed to update blogs text');
+  }
+};
+
 // Delete banner image
 export const deleteBannerImage = async (
   section: string,
-  field: 'banner' | 'mobilebanner'
+  field: 'banner' | 'mobilebanner' | 'image' | 'mobileimage'
 ): Promise<BannerApiResponse> => {
   try {
     const response = await bannerApiClient.delete(`/api/banners/${section}/${field}`);

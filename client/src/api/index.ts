@@ -16,6 +16,7 @@ export {
   getBanners, 
   uploadBannerImage, 
   updateBannerAlt, 
+  updateBlogsDetailText,
   deleteBannerImage 
 } from './banner/bannerApi';
 export type {

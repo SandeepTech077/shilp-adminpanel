@@ -717,7 +717,7 @@ const ProjectAdminForm = () => {
     <div className="min-h-screen bg-white py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-200">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-8 py-6">
+          <div className="bg-linear-to-r from-blue-600 to-blue-800 px-8 py-6">
             <h1 className="text-3xl font-bold text-white">Create New Project</h1>
             <p className="text-blue-100 mt-2">Upload images and fill in all details</p>
           </div>

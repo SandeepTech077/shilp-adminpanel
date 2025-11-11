@@ -27,6 +27,42 @@ const bannerSectionSchema = new mongoose.Schema({
   }
 }, { _id: false }); // Disable _id for subdocuments
 
+// Blogs Detail schema for blogs image section
+const blogsDetailSchema = new mongoose.Schema({
+  image: { 
+    type: String, 
+    default: '' 
+  },
+  mobileimage: { 
+    type: String, 
+    default: '' 
+  },
+  alt: { 
+    type: String, 
+    default: '' 
+  },
+  title: { 
+    type: String, 
+    default: '' 
+  },
+  description: { 
+    type: String, 
+    default: '' 
+  },
+  imageMetadata: {
+    uploadedAt: { type: Date, default: null },
+    filename: { type: String, default: '' },
+    originalName: { type: String, default: '' },
+    size: { type: Number, default: 0 }
+  },
+  mobileimageMetadata: {
+    uploadedAt: { type: Date, default: null },
+    filename: { type: String, default: '' },
+    originalName: { type: String, default: '' },
+    size: { type: Number, default: 0 }
+  }
+}, { _id: false }); // Disable _id for subdocuments
+
 const bannerSchema = new mongoose.Schema({
   // Main banner sections with default values
   homepageBanner: { 
@@ -69,6 +105,10 @@ const bannerSchema = new mongoose.Schema({
     type: bannerSectionSchema, 
     default: () => ({}) 
   },
+  blogsDetail: { 
+    type: blogsDetailSchema, 
+    default: () => ({}) 
+  },
   
   documentId: { 
     type: String, 
@@ -87,7 +127,7 @@ bannerSchema.pre('save', function(next) {
   const requiredSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
   ];
   
   requiredSections.forEach(section => {

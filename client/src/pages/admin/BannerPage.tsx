@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Upload, Trash2, Loader2, Save, Eye, X, AlertCircle } from 'lucide-react';
-import { getBanners, uploadBannerImage, updateBannerAlt, deleteBannerImage, getImageUrl, formatFileSize, formatUploadDate } from '../../api';
+import { getBanners, uploadBannerImage, updateBannerAlt, updateBlogsDetailText, deleteBannerImage, getImageUrl, formatFileSize, formatUploadDate } from '../../api';
 import { SuccessModal, type SuccessModalProps } from '../../components/modals';
 
 
@@ -96,6 +96,27 @@ interface BannerSectionData {
   };
 }
 
+// Blogs Detail type for blogs image section
+interface BlogsDetailData {
+  image: string;
+  mobileimage: string;
+  alt: string;
+  title: string;
+  description: string;
+  imageMetadata?: {
+    uploadedAt?: string | null;
+    filename?: string;
+    originalName?: string;
+    size?: number;
+  };
+  mobileimageMetadata?: {
+    uploadedAt?: string | null;
+    filename?: string;
+    originalName?: string;
+    size?: number;
+  };
+}
+
 interface BannersData {
   homepageBanner: BannerSectionData;
   aboutUs: BannerSectionData;
@@ -107,6 +128,7 @@ interface BannersData {
   ourTeamBanner: BannerSectionData;
   termsConditionsBanner: BannerSectionData;
   privacyPolicyBanner: BannerSectionData;
+  blogsDetail: BlogsDetailData;
 }
 
 // Available banner sections
@@ -121,14 +143,18 @@ const BANNER_SECTIONS = [
   { key: 'ourTeamBanner', label: 'Our Team Banner' },
   { key: 'termsConditionsBanner', label: 'Terms & Conditions Banner' },
   { key: 'privacyPolicyBanner', label: 'Privacy Policy Banner' },
+  { key: 'blogsDetail', label: 'Blogs Image', isBlogsDetail: true },
 ];
 
 const BannerManagement: React.FC = () => {
   const [banners, setBanners] = useState<Partial<BannersData>>({});
   const [localAltTexts, setLocalAltTexts] = useState<Record<string, string>>({});
+  const [localBlogsTitle, setLocalBlogsTitle] = useState<string>('');
+  const [localBlogsDescription, setLocalBlogsDescription] = useState<string>('');
   const [loading, setLoading] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [success, setSuccess] = useState<string>('');
+  const lastUploadedSectionRef = useRef<string | null>(null);
   const [previewModal, setPreviewModal] = useState<{ show: boolean; image: string; alt: string }>({ 
     show: false, 
     image: '', 
@@ -153,21 +179,32 @@ const BannerManagement: React.FC = () => {
   // Memoized computed values for performance optimization
   const memoizedImageUrls = useMemo(() => {
     const urls: Record<string, { desktop: string; mobile: string }> = {};
-    BANNER_SECTIONS.forEach(({ key }) => {
+    BANNER_SECTIONS.forEach(({ key, isBlogsDetail }) => {
       const sectionData = banners[key as keyof BannersData];
       
-      // Ensure we only use valid, non-empty image paths
-      const desktopImage = sectionData?.banner && sectionData.banner.trim() !== '' 
-        ? getImageUrl(sectionData.banner) 
-        : '';
-      const mobileImage = sectionData?.mobilebanner && sectionData.mobilebanner.trim() !== '' 
-        ? getImageUrl(sectionData.mobilebanner) 
-        : '';
-        
-      urls[key] = {
-        desktop: desktopImage,
-        mobile: mobileImage
-      };
+      // Handle blogsDetail section separately
+      if (isBlogsDetail && key === 'blogsDetail') {
+        const blogsData = sectionData as BlogsDetailData;
+        urls[key] = {
+          desktop: blogsData?.image && blogsData.image.trim() !== '' ? getImageUrl(blogsData.image) : '',
+          mobile: blogsData?.mobileimage && blogsData.mobileimage.trim() !== '' ? getImageUrl(blogsData.mobileimage) : ''
+        };
+      } else {
+        // Regular banner sections
+        const bannerData = sectionData as BannerSectionData;
+        // Ensure we only use valid, non-empty image paths
+        const desktopImage = bannerData?.banner && bannerData.banner.trim() !== '' 
+          ? getImageUrl(bannerData.banner) 
+          : '';
+        const mobileImage = bannerData?.mobilebanner && bannerData.mobilebanner.trim() !== '' 
+          ? getImageUrl(bannerData.mobilebanner) 
+          : '';
+          
+        urls[key] = {
+          desktop: desktopImage,
+          mobile: mobileImage
+        };
+      }
     });
     return urls;
   }, [banners]);
@@ -204,6 +241,17 @@ const BannerManagement: React.FC = () => {
       message: '',
       details: undefined
     });
+    
+    // Scroll back to the section that was just updated
+    if (lastUploadedSectionRef.current) {
+      const sectionElement = document.getElementById(`section-${lastUploadedSectionRef.current}`);
+      if (sectionElement) {
+        setTimeout(() => {
+          sectionElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+      }
+      lastUploadedSectionRef.current = null;
+    }
   }, []);
 
   // Fetch all banners with enhanced error handling
@@ -242,8 +290,14 @@ const BannerManagement: React.FC = () => {
 
   // Debug effect to log banners state changes
   useEffect(() => {
-  if (Object.keys(banners).length > 0) {
+    if (Object.keys(banners).length > 0) {
       // Banners state updated (verbose logging removed)
+      // Initialize blogsDetail title and description
+      if (banners.blogsDetail) {
+        const blogsData = banners.blogsDetail as BlogsDetailData;
+        setLocalBlogsTitle(blogsData.title || '');
+        setLocalBlogsDescription(blogsData.description || '');
+      }
     }
   }, [banners]);
 
@@ -251,10 +305,13 @@ const BannerManagement: React.FC = () => {
 
   // Upload image for a specific section and field
   // Handle image upload - Optimized with useCallback
-  const handleImageUpload = useCallback(async (section: string, field: 'banner' | 'mobilebanner', file: File) => {
+  const handleImageUpload = useCallback(async (section: string, field: 'banner' | 'mobilebanner' | 'image' | 'mobileimage', file: File) => {
     setLoading(`upload-${section}-${field}`);
     setError('');
     setSuccess('');
+    
+    // Store the section being uploaded
+    lastUploadedSectionRef.current = section;
     
     try {
       const altText = banners[section as keyof BannersData]?.alt || '';
@@ -340,8 +397,52 @@ const BannerManagement: React.FC = () => {
     }
   };
 
+  // Update BlogsDetail title and description
+  const handleBlogsTextUpdate = useCallback(async () => {
+    setLoading('blogstext-update');
+    setError('');
+    setSuccess('');
+    
+    try {
+      // Call API to save to backend
+      const response = await updateBlogsDetailText(localBlogsTitle, localBlogsDescription);
+      
+      if (response.success) {
+        // Update local banners state with new values
+        setBanners(prev => ({
+          ...prev,
+          blogsDetail: {
+            ...(prev.blogsDetail as BlogsDetailData),
+            title: localBlogsTitle,
+            description: localBlogsDescription
+          }
+        }));
+        
+        // Show success modal
+        setSuccessModal({
+          isOpen: true,
+          title: 'Blogs Text Updated',
+          message: `Blog title and description have been successfully updated.${localBlogsTitle ? '\n\nTitle: ' + localBlogsTitle : ''}${localBlogsDescription ? '\n\nDescription: ' + (localBlogsDescription.length > 100 ? localBlogsDescription.substring(0, 100) + '...' : localBlogsDescription) : ''}`
+        });
+      }
+      
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Update failed: ${errorMessage}`);
+    } finally {
+      setLoading('');
+    }
+  }, [localBlogsTitle, localBlogsDescription]);
+
+  // Check if blogsDetail text has unsaved changes
+  const hasBlogsTextChanges = useCallback(() => {
+    const blogsData = banners.blogsDetail as BlogsDetailData;
+    return localBlogsTitle !== (blogsData?.title || '') || 
+           localBlogsDescription !== (blogsData?.description || '');
+  }, [banners.blogsDetail, localBlogsTitle, localBlogsDescription]);
+
   // Delete image for a specific section and field
-  const handleImageDelete = async (section: string, field: 'banner' | 'mobilebanner') => {
+  const handleImageDelete = async (section: string, field: 'banner' | 'mobilebanner' | 'image' | 'mobileimage') => {
     if (!window.confirm('Are you sure you want to delete this image?')) return;
     
     setLoading(`delete-${section}-${field}`);
@@ -414,7 +515,7 @@ const BannerManagement: React.FC = () => {
 
   // Handle file input change
   // Handle file selection - Optimized with useCallback
-  const handleFileChange = useCallback((section: string, field: 'banner' | 'mobilebanner', event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((section: string, field: 'banner' | 'mobilebanner' | 'image' | 'mobileimage', event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
       handleImageUpload(section, field, file);
@@ -440,10 +541,6 @@ const BannerManagement: React.FC = () => {
             </div>
           )}
         </div>
-        <p className="text-gray-600">
-          Manage banners across all sections of your website. Upload desktop and mobile versions, 
-          set alt text for accessibility, and preview changes.
-        </p>
       </div>
 
       {/* Alert Messages */}
@@ -475,11 +572,281 @@ const BannerManagement: React.FC = () => {
 
       {/* Banner Sections Grid */}
       <div className="grid gap-8">
-        {BANNER_SECTIONS.map(({ key, label }) => {
+        {BANNER_SECTIONS.map(({ key, label, isBlogsDetail }) => {
           const sectionData = banners[key as keyof BannersData];
           
+          // Render BlogsDetail section separately
+          if (isBlogsDetail && key === 'blogsDetail') {
+            const blogsData = sectionData as BlogsDetailData;
+            return (
+              <div key={key} id={`section-${key}`} className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-xl font-semibold text-gray-800 mb-6">{label}</h2>
+                
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Desktop Image Upload Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-gray-700">Desktop Image</h3>
+                    
+                    {blogsData?.image ? (
+                      <div className="relative group">
+                        <LazyImage 
+                          src={memoizedImageUrls[key]?.desktop || ''} 
+                          alt={blogsData?.alt || 'Blogs desktop image'}
+                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                        
+                        {/* Image metadata overlay */}
+                        {blogsData.imageMetadata && (
+                          <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            {blogsData.imageMetadata.size && 
+                              formatFileSize(blogsData.imageMetadata.size)
+                            }
+                            {blogsData.imageMetadata.uploadedAt && (
+                              <div>
+                                {formatUploadDate(blogsData.imageMetadata.uploadedAt)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => showPreview(getImageUrl(blogsData.image), blogsData.alt || '')}
+                              className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleImageDelete(key, 'image')}
+                              disabled={loading === `delete-${key}-image`}
+                              className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                              {loading === `delete-${key}-image` ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-5 h-5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <div className="text-center">
+                          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500">No desktop image uploaded</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-3">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(key, 'image', e)}
+                          className="hidden"
+                        />
+                        <span className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                          {loading === `upload-${key}-image` ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          {blogsData?.image ? 'Replace' : 'Upload'} Desktop
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Mobile Image Upload Section */}
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium text-gray-700">Mobile Image</h3>
+                    
+                    {blogsData?.mobileimage ? (
+                      <div className="relative group">
+                        <LazyImage 
+                          src={memoizedImageUrls[key]?.mobile || ''} 
+                          alt={blogsData?.alt || 'Blogs mobile image'}
+                          className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
+                        />
+                        
+                        {/* Image metadata overlay */}
+                        {blogsData.mobileimageMetadata && (
+                          <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                            {blogsData.mobileimageMetadata.size && 
+                              formatFileSize(blogsData.mobileimageMetadata.size)
+                            }
+                            {blogsData.mobileimageMetadata.uploadedAt && (
+                              <div>
+                                {formatUploadDate(blogsData.mobileimageMetadata.uploadedAt)}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="flex gap-3">
+                            <button
+                              onClick={() => showPreview(getImageUrl(blogsData.mobileimage), blogsData.alt || '')}
+                              className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </button>
+                            <button
+                              onClick={() => handleImageDelete(key, 'mobileimage')}
+                              disabled={loading === `delete-${key}-mobileimage`}
+                              className="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors disabled:opacity-50"
+                            >
+                              {loading === `delete-${key}-mobileimage` ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                <Trash2 className="w-5 h-5" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-full h-48 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                        <div className="text-center">
+                          <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                          <p className="text-gray-500">No mobile image uploaded</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="flex items-center gap-3">
+                      <label className="flex-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleFileChange(key, 'mobileimage', e)}
+                          className="hidden"
+                        />
+                        <span className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+                          {loading === `upload-${key}-mobileimage` ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Upload className="w-4 h-4" />
+                          )}
+                          {blogsData?.mobileimage ? 'Replace' : 'Upload'} Mobile
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Alt Text, Title and Description Section */}
+                <div className="space-y-6">
+                  {/* Alt Text Section */}
+                  <div className="pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">
+                      Alt Text (for accessibility)
+                      {hasUnsavedAltChanges(key) && (
+                        <span className="ml-2 text-sm text-orange-600 font-normal">• Unsaved changes</span>
+                      )}
+                    </h3>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={getAltText(key)}
+                        onChange={(e) => handleAltTextChange(key, e.target.value)}
+                        placeholder="Enter descriptive alt text for screen readers..."
+                        className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                          hasUnsavedAltChanges(key) 
+                            ? 'border-orange-300 bg-orange-50' 
+                            : 'border-gray-300'
+                        }`}
+                      />
+                      <button
+                        onClick={() => {
+                          const altText = getAltText(key);
+                          handleAltUpdate(key, altText);
+                        }}
+                        disabled={loading === `alt-${key}` || !getAltText(key) || !hasUnsavedAltChanges(key)}
+                        className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      >
+                        {loading === `alt-${key}` ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Save className="w-4 h-4" />
+                        )}
+                        Save Alt Text
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Title Section */}
+                  <div className="pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">
+                      Title
+                      {hasBlogsTextChanges() && (
+                        <span className="ml-2 text-sm text-orange-600 font-normal">• Unsaved changes</span>
+                      )}
+                    </h3>
+                    <input
+                      type="text"
+                      value={localBlogsTitle}
+                      onChange={(e) => setLocalBlogsTitle(e.target.value)}
+                      placeholder="Enter blog title..."
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        hasBlogsTextChanges() 
+                          ? 'border-orange-300 bg-orange-50' 
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Description Section */}
+                  <div className="pt-6 border-t border-gray-200">
+                    <h3 className="text-lg font-medium text-gray-700 mb-4">Description</h3>
+                    <textarea
+                      value={localBlogsDescription}
+                      onChange={(e) => setLocalBlogsDescription(e.target.value)}
+                      placeholder="Enter blog description..."
+                      rows={4}
+                      className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        hasBlogsTextChanges() 
+                          ? 'border-orange-300 bg-orange-50' 
+                          : 'border-gray-300'
+                      }`}
+                    />
+                  </div>
+
+                  {/* Save Button for Title & Description */}
+                  {hasBlogsTextChanges() && (
+                    <div className="pt-6 border-t border-gray-200">
+                      <button
+                        onClick={handleBlogsTextUpdate}
+                        disabled={loading === 'blogstext-update'}
+                        className="w-full px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      >
+                        {loading === 'blogstext-update' ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-4 h-4" />
+                            Save Title & Description
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          }
+
+          // Regular banner sections
+          const bannerData = sectionData as BannerSectionData;
+          
           return (
-            <div key={key} className="bg-white rounded-xl shadow-lg p-6">
+            <div key={key} id={`section-${key}`} className="bg-white rounded-xl shadow-lg p-6">
               <h2 className="text-xl font-semibold text-gray-800 mb-6">{label}</h2>
               
               <div className="grid md:grid-cols-2 gap-6">
@@ -487,18 +854,18 @@ const BannerManagement: React.FC = () => {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-gray-700">Desktop Banner</h3>
                   
-                  {sectionData?.banner ? (
+                  {bannerData?.banner ? (
                     <div className="relative group">
                       <LazyImage 
                         src={memoizedImageUrls[key]?.desktop || ''} 
-                        alt={sectionData.alt || 'Desktop banner'}
+                        alt={bannerData.alt || 'Desktop banner'}
                         className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
                         onLoad={() => {
                           console.info('✅ Successfully loaded image:', memoizedImageUrls[key]?.desktop);
                         }}
                         onError={(e) => {
                           console.error('❌ Failed to load image:', {
-                            originalPath: sectionData.banner,
+                            originalPath: bannerData.banner,
                             fullUrl: memoizedImageUrls[key]?.desktop,
                             error: e
                           });
@@ -506,14 +873,14 @@ const BannerManagement: React.FC = () => {
                       />
                       
                       {/* Image metadata overlay */}
-                      {sectionData.bannerMetadata && (
+                      {bannerData.bannerMetadata && (
                         <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          {sectionData.bannerMetadata.size && 
-                            formatFileSize(sectionData.bannerMetadata.size)
+                          {bannerData.bannerMetadata.size && 
+                            formatFileSize(bannerData.bannerMetadata.size)
                           }
-                          {sectionData.bannerMetadata.uploadedAt && (
+                          {bannerData.bannerMetadata.uploadedAt && (
                             <div>
-                              {formatUploadDate(sectionData.bannerMetadata.uploadedAt)}
+                              {formatUploadDate(bannerData.bannerMetadata.uploadedAt)}
                             </div>
                           )}
                         </div>
@@ -522,7 +889,7 @@ const BannerManagement: React.FC = () => {
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                         <div className="flex gap-3">
                           <button
-                            onClick={() => showPreview(getImageUrl(sectionData.banner), sectionData.alt || '')}
+                            onClick={() => showPreview(getImageUrl(bannerData.banner), bannerData.alt || '')}
                             className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
                           >
                             <Eye className="w-5 h-5" />
@@ -564,7 +931,7 @@ const BannerManagement: React.FC = () => {
                         ) : (
                           <Upload className="w-4 h-4" />
                         )}
-                        {sectionData?.banner ? 'Replace' : 'Upload'} Desktop
+                        {bannerData?.banner ? 'Replace' : 'Upload'} Desktop
                       </span>
                     </label>
                   </div>
@@ -574,18 +941,18 @@ const BannerManagement: React.FC = () => {
                 <div className="space-y-4">
                   <h3 className="text-lg font-medium text-gray-700">Mobile Banner</h3>
                   
-                  {sectionData?.mobilebanner ? (
+                  {bannerData?.mobilebanner ? (
                     <div className="relative group">
                       <LazyImage 
                         src={memoizedImageUrls[key]?.mobile || ''} 
-                        alt={sectionData.alt || 'Mobile banner'}
+                        alt={bannerData.alt || 'Mobile banner'}
                         className="w-full h-48 object-cover rounded-lg border-2 border-gray-200"
                         onLoad={() => {
                           console.info('✅ Successfully loaded mobile image:', memoizedImageUrls[key]?.mobile);
                         }}
                         onError={(e) => {
                           console.error('❌ Failed to load mobile image:', {
-                            originalPath: sectionData.mobilebanner,
+                            originalPath: bannerData.mobilebanner,
                             fullUrl: memoizedImageUrls[key]?.mobile,
                             error: e
                           });
@@ -593,14 +960,14 @@ const BannerManagement: React.FC = () => {
                       />
                       
                       {/* Image metadata overlay */}
-                      {sectionData.mobilebannerMetadata && (
+                      {bannerData.mobilebannerMetadata && (
                         <div className="absolute top-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                          {sectionData.mobilebannerMetadata.size && 
-                            formatFileSize(sectionData.mobilebannerMetadata.size)
+                          {bannerData.mobilebannerMetadata.size && 
+                            formatFileSize(bannerData.mobilebannerMetadata.size)
                           }
-                          {sectionData.mobilebannerMetadata.uploadedAt && (
+                          {bannerData.mobilebannerMetadata.uploadedAt && (
                             <div>
-                              {formatUploadDate(sectionData.mobilebannerMetadata.uploadedAt)}
+                              {formatUploadDate(bannerData.mobilebannerMetadata.uploadedAt)}
                             </div>
                           )}
                         </div>
@@ -609,7 +976,7 @@ const BannerManagement: React.FC = () => {
                       <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100">
                         <div className="flex gap-3">
                           <button
-                            onClick={() => showPreview(getImageUrl(sectionData.mobilebanner), sectionData.alt || '')}
+                            onClick={() => showPreview(getImageUrl(bannerData.mobilebanner), bannerData.alt || '')}
                             className="bg-white text-gray-800 p-2 rounded-full hover:bg-gray-100 transition-colors"
                           >
                             <Eye className="w-5 h-5" />
@@ -651,7 +1018,7 @@ const BannerManagement: React.FC = () => {
                         ) : (
                           <Upload className="w-4 h-4" />
                         )}
-                        {sectionData?.mobilebanner ? 'Replace' : 'Upload'} Mobile
+                        {bannerData?.mobilebanner ? 'Replace' : 'Upload'} Mobile
                       </span>
                     </label>
                   </div>

@@ -42,9 +42,20 @@ exports.uploadBannerImage = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
   ];
-  const validFields = ['banner', 'mobilebanner'];
+  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage']; // Added 'mobileimage' for blogsDetail
+
+  // For blogsDetail, only 'image' and 'mobileimage' fields are valid
+  if (section === 'blogsDetail' && field !== 'image' && field !== 'mobileimage') {
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
+    }
+    return res.status(400).json({ 
+      success: false, 
+      error: 'For blogsDetail section, only "image" and "mobileimage" fields are allowed' 
+    });
+  }
 
   if (!validSections.includes(section) || !validFields.includes(field)) {
     // Clean up uploaded file if validation fails
@@ -103,7 +114,7 @@ exports.updateBannerAlt = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
   ];
 
   if (!validSections.includes(section)) {
@@ -140,6 +151,37 @@ exports.updateBannerAlt = async (req, res) => {
   }
 };
 
+exports.updateBlogsDetailText = async (req, res) => {
+  const { title, description } = req.body;
+  
+  // Validate input
+  if (typeof title !== 'string' || typeof description !== 'string') {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'Title and description must be strings' 
+    });
+  }
+  
+  try {
+    const updatedBanners = await bannerService.updateBlogsDetailText(title, description);
+    res.json({ 
+      success: true, 
+      message: 'Blogs title and description updated successfully',
+      data: {
+        title,
+        description,
+        banners: updatedBanners
+      }
+    });
+  } catch (err) {
+    console.error('Blogs text update error:', err);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to update blogs text: ' + err.message 
+    });
+  }
+};
+
 exports.deleteBannerImage = async (req, res) => {
   const { section, field } = req.params;
   const { oldImageUrl } = req.body;
@@ -148,9 +190,17 @@ exports.deleteBannerImage = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
   ];
-  const validFields = ['banner', 'mobilebanner'];
+  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage']; // Added 'mobileimage' for blogsDetail
+
+  // For blogsDetail, only 'image' and 'mobileimage' fields are valid
+  if (section === 'blogsDetail' && field !== 'image' && field !== 'mobileimage') {
+    return res.status(400).json({ 
+      success: false, 
+      error: 'For blogsDetail section, only "image" and "mobileimage" fields are allowed' 
+    });
+  }
 
   if (!validSections.includes(section) || !validFields.includes(field)) {
     return res.status(400).json({ 

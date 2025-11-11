@@ -126,6 +126,9 @@ router.post('/:section/:field', authenticateAdmin, upload.single('image'), banne
 router.patch('/:section/alt', authenticateAdmin, bannerController.updateBannerAlt);
 router.put('/:section/alt', authenticateAdmin, bannerController.updateBannerAlt);
 
+// Update blogsDetail title and description
+router.put('/blogsDetail/text', authenticateAdmin, bannerController.updateBlogsDetailText);
+
 // Delete banner image for specific section and field
 router.delete('/:section/:field', authenticateAdmin, bannerController.deleteBannerImage);
 
