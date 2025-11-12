@@ -6,7 +6,6 @@ exports.getBanners = async (req, res) => {
   try {
     const banners = await bannerService.getBanners();
     
-    // Add caching headers
     res.set({
       'Cache-Control': 'private, max-age=30',
       'ETag': `"${banners._id}-${banners.updatedAt?.getTime()}"`
@@ -38,7 +37,6 @@ exports.uploadBannerImage = async (req, res) => {
     });
   }
 
-  // Validate section and field parameters
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
@@ -58,7 +56,6 @@ exports.uploadBannerImage = async (req, res) => {
   }
 
   if (!validSections.includes(section) || !validFields.includes(field)) {
-    // Clean up uploaded file if validation fails
     if (fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
     }
@@ -69,17 +66,14 @@ exports.uploadBannerImage = async (req, res) => {
   }
 
   try {
-    // Create proper image URL path
     const imageUrl = `/uploads/banners/${file.filename}`;
     
-    // Prepare file metadata for tracking
     const fileMetadata = {
       filename: file.filename,
       originalName: file.originalname,
       size: file.size
     };
     
-    // Upload new image (this will automatically delete previous image)
     const updatedBanners = await bannerService.uploadBannerImage(section, field, imageUrl, alt, fileMetadata);
     
     res.json({ 
@@ -94,7 +88,6 @@ exports.uploadBannerImage = async (req, res) => {
       }
     });
   } catch (err) {
-    // Clean up uploaded file on error
     if (fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
     }
@@ -110,7 +103,6 @@ exports.updateBannerAlt = async (req, res) => {
   const { section } = req.params;
   const { alt } = req.body;
   
-  // Validate section parameter
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
@@ -154,7 +146,6 @@ exports.updateBannerAlt = async (req, res) => {
 exports.updateBlogsDetailText = async (req, res) => {
   const { title, description } = req.body;
   
-  // Validate input
   if (typeof title !== 'string' || typeof description !== 'string') {
     return res.status(400).json({ 
       success: false, 
@@ -186,7 +177,6 @@ exports.deleteBannerImage = async (req, res) => {
   const { section, field } = req.params;
   const { oldImageUrl } = req.body;
   
-  // Validate parameters
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
@@ -194,7 +184,6 @@ exports.deleteBannerImage = async (req, res) => {
   ];
   const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage']; // Added 'mobileimage' for blogsDetail
 
-  // For blogsDetail, only 'image' and 'mobileimage' fields are valid
   if (section === 'blogsDetail' && field !== 'image' && field !== 'mobileimage') {
     return res.status(400).json({ 
       success: false, 

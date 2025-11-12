@@ -94,7 +94,6 @@ class ProjectTreeService {
       
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
-        console.log(`✅ Deleted image: ${fullPath}`);
       }
     } catch (error) {
       console.error(`❌ Error deleting image file: ${error.message}`);

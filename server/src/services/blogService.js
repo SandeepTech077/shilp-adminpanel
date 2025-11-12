@@ -93,7 +93,6 @@ const deleteBlog = async (blogId) => {
 
   try {
     await fs.rm(blogFolder, { recursive: true, force: true });
-    console.log(`✅ Deleted blog folder: /uploads/blogs/${blog.url}`);
   } catch (error) {
     console.error(`⚠️ Error deleting blog folder: ${error.message}`);
     // Don't throw error if folder deletion fails
@@ -134,7 +133,6 @@ const deleteSpecificImages = async (imagePaths) => {
     try {
       const fullPath = path.join(__dirname, "../..", imagePath);
       await fs.unlink(fullPath);
-      console.log(`✅ Deleted old image: ${imagePath}`);
     } catch (error) {
       console.error(`Error deleting image ${imagePath}: ${error.message}`);
     }

@@ -2,8 +2,7 @@ const mongoose = require('mongoose');
 
 const connectDatabase = async () => {
   try {
-    // Prefer an explicit DATABASE_URL environment variable. Use a local
-    // fallback for developer convenience but do NOT hard-code production
+
     // credentials in source.
     const dbUrl = process.env.DATABASE_URL 
 

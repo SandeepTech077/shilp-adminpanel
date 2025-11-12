@@ -14,7 +14,6 @@ class ProjectService {
     
     try {
       // DEBUG: Log incoming projectData
-      console.log('🔍 SERVICE createProject: Incoming projectData.aboutUsDetail:', JSON.stringify(projectData.aboutUsDetail, null, 2));
       
       // Check if slug already exists
       const slugExists = await projectRepository.slugExists(projectData.slug);
@@ -26,7 +25,6 @@ class ProjectService {
       const processedData = await this.processFileUploads(projectData, files);
       
       // DEBUG: Log after file processing
-      console.log('🔍 SERVICE createProject: After processFileUploads, aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
       
       // Extract saved file paths for cleanup if needed
       savedFiles = this.extractSavedFilePaths(processedData);
@@ -34,7 +32,6 @@ class ProjectService {
       // Create project
       const project = await projectRepository.create(processedData);
       
-      console.log('🔍 SERVICE createProject: Created project aboutUsDetail:', JSON.stringify(project.aboutUsDetail, null, 2));
       
       return {
         success: true,
@@ -325,7 +322,6 @@ class ProjectService {
   async processFileUploads(data, files = {}, existingProject = null) {
     const processedData = { ...data };
     
-    console.log('🔍 processFileUploads START: aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
     
     // Create project-specific folder based on projectTitle
     const projectFolderName = this.createSafeDirectoryName(data.projectTitle || existingProject?.projectTitle || 'untitled');
@@ -366,7 +362,6 @@ class ProjectService {
         
         processedData.aboutUsDetail.image.url = aboutUsImagePath;
         
-        console.log('🔍 Service: aboutUsDetail after image processing:', JSON.stringify(processedData.aboutUsDetail, null, 2));
         
         // Delete old about us image if updating
         if (existingProject && existingProject.aboutUsDetail && existingProject.aboutUsDetail.image && existingProject.aboutUsDetail.image.url) {
@@ -376,7 +371,6 @@ class ProjectService {
         // User wants to delete the about us image
         if (existingProject.aboutUsDetail && existingProject.aboutUsDetail.image && existingProject.aboutUsDetail.image.url) {
           await this.deleteFile(existingProject.aboutUsDetail.image.url);
-          console.log('🔍 Service: Deleted about us image');
         }
         // Clear the image URL but preserve alt text and descriptions
         if (processedData.aboutUsDetail && processedData.aboutUsDetail.image) {
@@ -385,7 +379,6 @@ class ProjectService {
       } else {
         // No image uploaded, ensure aboutUsDetail structure exists
         if (processedData.aboutUsDetail) {
-          console.log('🔍 Service: No image uploaded, preserving description fields');
           if (!processedData.aboutUsDetail.image) {
             processedData.aboutUsDetail.image = { alt: processedData.aboutUsDetail.image?.alt || '' };
           }
@@ -511,7 +504,6 @@ class ProjectService {
         }
       }
 
-      console.log('🔍 processFileUploads END: aboutUsDetail:', JSON.stringify(processedData.aboutUsDetail, null, 2));
       
       return processedData;
     } catch (error) {
@@ -570,7 +562,6 @@ class ProjectService {
       }
     } catch (error) {
       // Ignore file not found errors
-      console.warn(`Failed to delete file: ${filePath}`, error.message);
     }
   }
 
@@ -676,7 +667,6 @@ class ProjectService {
           await fs.unlink(fullPath);
         }
       } catch (error) {
-        console.warn(`Failed to delete file ${filePath}:`, error.message);
       }
     }
   }

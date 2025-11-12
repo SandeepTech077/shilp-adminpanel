@@ -120,7 +120,6 @@ export const getProjects = async (type?: 'residential' | 'commercial' | 'plot'):
   try {
     const params = type ? { type } : {};
     const response = await projectApiClient.get('/api/projects', { params });
-    console.log('Get projects response:', response.data);
     
     // The API returns: { success: true, data: [...projects], pagination: {...} }
     // We need to transform it to: { success: true, data: { projects: [...], pagination: {...} } }

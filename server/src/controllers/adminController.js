@@ -2,12 +2,10 @@ const adminService = require('../services/adminService');
 const { validationResult } = require('express-validator');
 
 class AdminController {
-  /**
-   * Admin login
-   */
+
   async login(req, res, next) {
     try {
-      // Check for validation errors
+   
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -35,9 +33,7 @@ class AdminController {
     }
   }
 
-  /**
-   * Get current admin profile (for token verification)
-   */
+
   async getProfile(req, res, next) {
     try {
       const result = await adminService.getProfile(req.admin.id);
@@ -51,9 +47,7 @@ class AdminController {
     }
   }
 
-  /**
-   * Verify admin token
-   */
+
   async verifyToken(req, res, _next) {
     try {
       const { token } = req.body;
@@ -79,9 +73,7 @@ class AdminController {
     }
   }
 
-  /**
-   * Forgot password (placeholder for future implementation)
-   */
+
   async forgotPassword(req, res, next) {
     try {
       const { email } = req.body;
@@ -93,8 +85,7 @@ class AdminController {
         });
       }
 
-      // TODO: Implement forgot password logic
-      // For now, just return a success message
+
       res.json({
         success: true,
         message: 'If an admin account with this email exists, a password reset link has been sent.'

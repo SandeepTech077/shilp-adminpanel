@@ -172,11 +172,8 @@ export default function EditProjectPage() {
       
       try {
         setLoading(true);
-        console.log('🔄 Loading project data for ID:', id);
         
         const response = await getProjectById(id);
-        
-        console.log('📦 API Response:', response);
         
         if (!response.success) {
           setError(response.message || 'Failed to load project');
@@ -191,8 +188,6 @@ export default function EditProjectPage() {
           console.error('❌ No project data in response');
           return;
         }
-        
-        console.log('✅ Project data loaded:', project.projectTitle);
         
         setFormData({
           projectTitle: project.projectTitle || '',
@@ -262,13 +257,6 @@ export default function EditProjectPage() {
           isActive: project.isActive ?? true,
         });
         
-        console.log('✅ Form data initialized with:', {
-          title: project.projectTitle,
-          type: project.projectType,
-          floorPlans: project.floorPlans?.length || 0,
-          projectImages: project.projectImages?.length || 0,
-          amenities: project.amenities?.length || 0,
-        });
         
         setError(null);
       } catch (err) {
@@ -528,8 +516,6 @@ export default function EditProjectPage() {
       submitData.append('projectStatusPercentage', formData.projectStatusPercentage.toString());
       submitData.append('isActive', String(formData.isActive));
       
-      console.log('✅ Basic fields added');
-      
       // About Us Details - send as flat fields, backend will restructure
       submitData.append('description1', formData.description1);
       submitData.append('description2', formData.description2);
@@ -538,16 +524,12 @@ export default function EditProjectPage() {
       submitData.append('aboutUsAlt', formData.aboutImageAlt);
       if (formData.aboutImage) {
         submitData.append('aboutUsImage', formData.aboutImage);
-        console.log('✅ About image added');
       }
       if (formData.deleteAboutImage) submitData.append('deleteAboutImage', 'true');
-      
-      console.log('✅ About section fields added');
       
       // Card Image
       if (formData.cardImage) {
         submitData.append('cardImage', formData.cardImage);
-        console.log('✅ Card image added');
       }
       if (formData.deleteCardImage) submitData.append('deleteCardImage', 'true');
       submitData.append('cardProjectType', formData.cardProjectType);
@@ -556,7 +538,6 @@ export default function EditProjectPage() {
       // Brochure
       if (formData.brochure) {
         submitData.append('brochure', formData.brochure);
-        console.log('✅ Brochure added');
       }
       if (formData.deleteBrochure) submitData.append('deleteBrochure', 'true');
       
@@ -622,12 +603,7 @@ export default function EditProjectPage() {
       submitData.append('mapIframeUrl', formData.mapIframeUrl);
       submitData.append('reraNumber', formData.reraNumber);
       
-      console.log('✅ Location & Contact fields added');
-      console.log('📤 Sending update request...');
-      
       const response = await updateProject(id, submitData);
-      
-      console.log('✅ Update response:', response);
       
       if (!response.success) {
         console.error('❌ Update failed:', response.message);

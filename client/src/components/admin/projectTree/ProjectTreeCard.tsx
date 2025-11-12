@@ -12,19 +12,14 @@ const ProjectTreeCard: React.FC<ProjectTreeCardProps> = ({ projectTree, onEdit, 
   
   const getImageUrl = (imagePath: string) => {
     if (!imagePath) {
-      console.log('No image path provided');
       return '/placeholder-image.png';
     }
     if (imagePath.startsWith('http')) {
-      console.log('Full URL:', imagePath);
       return imagePath;
     }
     // Clean the path - remove leading slash if present
     const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
     const fullUrl = `${IMAGE_BASE_URL}/${cleanPath}`;
-    console.log('🖼️ Constructed Image URL:', fullUrl);
-    console.log('📁 Original path:', imagePath);
-    console.log('🌐 IMAGE_BASE_URL:', IMAGE_BASE_URL);
     return fullUrl;
   };
 

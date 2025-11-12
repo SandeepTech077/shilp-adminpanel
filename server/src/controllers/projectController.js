@@ -25,7 +25,6 @@ class ProjectController {
       const parsedData = this.parseFormData(req.body);
       
       // DEBUG: Log parsed aboutUsDetail
-      console.log('🔍 CONTROLLER: Final parsedData.aboutUsDetail:', JSON.stringify(parsedData.aboutUsDetail, null, 2));
       
       // Add unique slug generation
       parsedData.slug = await this.generateUniqueSlug(parsedData.projectTitle);
@@ -429,7 +428,6 @@ class ProjectController {
       image: { alt: body.aboutUsAlt || '' }
     };
 
-    console.log('🔍 Parsed aboutUsDetail:', JSON.stringify(parsed.aboutUsDetail, null, 2));
 
     // Parse floor plans array
     const floorPlanKeys = Object.keys(body).filter(key => key.startsWith('floorPlans['));

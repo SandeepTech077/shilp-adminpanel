@@ -40,7 +40,6 @@ export const useAdminAuth = (): UseAdminAuth => {
           try {
             await AdminApi.verifyToken();
           } catch (error) {
-            console.warn('Token verification failed during initialization:', error);
             // Don't logout here - let the user try to use the app
             // If token is truly invalid, it will be caught during actual API calls
           }
