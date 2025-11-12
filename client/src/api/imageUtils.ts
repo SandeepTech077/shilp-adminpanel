@@ -5,16 +5,15 @@ import axios from 'axios';
  * Images should always be served via frontend URL (with proxy to backend)
  */
 const getImageBaseUrl = (): string => {
-  const isDev = import.meta.env.DEV;
-  
-  if (isDev) {
-    // In development, use frontend URL (images served via proxy)
-    const devPort = import.meta.env.VITE_DEV_PORT || '5174';
-    return `http://localhost:${devPort}`;
-  } else {
-    // In production, use configured image base URL (still frontend)
-    return import.meta.env.VITE_IMAGE_BASE_URL || window.location.origin;
+  // If accessing from network (not localhost), use network IP from env
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const networkIP = import.meta.env.VITE_NETWORK_IP || window.location.hostname;
+    const protocol = window.location.protocol;
+    return `${protocol}//${networkIP}:8081`;
   }
+  
+  // In development with localhost, use configured image base URL
+  return import.meta.env.VITE_IMAGE_BASE_URL?.split(',')[0] || 'http://localhost:8081';
 };
 
 /**

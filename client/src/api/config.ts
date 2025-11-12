@@ -4,8 +4,15 @@ import type { AxiosRequestConfig } from 'axios';
 
 // Get base URL from environment variables
 const getBaseUrl = (): string => {
-  // In development, use environment variable or fallback to localhost:8081
-  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
+  // If accessing from network (not localhost), use network IP from env
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const networkIP = import.meta.env.VITE_NETWORK_IP || window.location.hostname;
+    const protocol = window.location.protocol;
+    return `${protocol}//${networkIP}:8081`;
+  }
+  
+  // In development with localhost, use configured API base URL
+  return import.meta.env.VITE_API_BASE_URL?.split(',')[0] || '';
 };
 
 export const API_CONFIG = {
