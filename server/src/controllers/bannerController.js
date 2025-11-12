@@ -40,11 +40,10 @@ exports.uploadBannerImage = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'projectTreeBanner', 'blogsDetail'
   ];
-  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage']; // Added 'mobileimage' for blogsDetail
+  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage'];
 
-  // For blogsDetail, only 'image' and 'mobileimage' fields are valid
   if (section === 'blogsDetail' && field !== 'image' && field !== 'mobileimage') {
     if (fs.existsSync(file.path)) {
       fs.unlinkSync(file.path);
@@ -106,7 +105,7 @@ exports.updateBannerAlt = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'projectTreeBanner', 'blogsDetail'
   ];
 
   if (!validSections.includes(section)) {
@@ -180,9 +179,9 @@ exports.deleteBannerImage = async (req, res) => {
   const validSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'projectTreeBanner', 'blogsDetail'
   ];
-  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage']; // Added 'mobileimage' for blogsDetail
+  const validFields = ['banner', 'mobilebanner', 'image', 'mobileimage'];
 
   if (section === 'blogsDetail' && field !== 'image' && field !== 'mobileimage') {
     return res.status(400).json({ 

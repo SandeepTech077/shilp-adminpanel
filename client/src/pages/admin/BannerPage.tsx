@@ -128,6 +128,7 @@ interface BannersData {
   ourTeamBanner: BannerSectionData;
   termsConditionsBanner: BannerSectionData;
   privacyPolicyBanner: BannerSectionData;
+  projectTreeBanner: BannerSectionData;
   blogsDetail: BlogsDetailData;
 }
 
@@ -143,6 +144,7 @@ const BANNER_SECTIONS = [
   { key: 'ourTeamBanner', label: 'Our Team Banner' },
   { key: 'termsConditionsBanner', label: 'Terms & Conditions Banner' },
   { key: 'privacyPolicyBanner', label: 'Privacy Policy Banner' },
+  { key: 'projectTreeBanner', label: 'Project Tree Banner' },
   { key: 'blogsDetail', label: 'Blogs Image', isBlogsDetail: true },
 ];
 

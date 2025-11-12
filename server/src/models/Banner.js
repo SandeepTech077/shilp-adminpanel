@@ -105,6 +105,10 @@ const bannerSchema = new mongoose.Schema({
     type: bannerSectionSchema, 
     default: () => ({}) 
   },
+  projectTreeBanner: { 
+    type: bannerSectionSchema, 
+    default: () => ({}) 
+  },
   blogsDetail: { 
     type: blogsDetailSchema, 
     default: () => ({}) 
@@ -128,7 +132,7 @@ bannerSchema.pre('save', function(next) {
   const requiredSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner', 'blogsDetail'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'projectTreeBanner', 'blogsDetail'
   ];
   
   requiredSections.forEach(section => {
@@ -140,6 +144,5 @@ bannerSchema.pre('save', function(next) {
   next();
 });
 
-// Index is already created by unique: true on documentId field
 
 module.exports = mongoose.model('Banner', bannerSchema);

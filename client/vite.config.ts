@@ -4,10 +4,8 @@ import tailwindcss from '@tailwindcss/vite'
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load env file based on `mode` in the current working directory.
   const env = loadEnv(mode, process.cwd(), '')
   
-  // Get port from environment variables
   const devPort = parseInt(env.VITE_DEV_PORT || '5174', 10)
   const prodPort = parseInt(env.VITE_PROD_PORT || '5174', 10)
   const apiBaseUrl = env.VITE_API_BASE_URL 
@@ -18,6 +16,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       port: port,
+      host: '0.0.0.0',
       proxy: {
         '/api': {
           target: apiBaseUrl,
@@ -29,7 +28,6 @@ export default defineConfig(({ mode }) => {
             proxy.on('proxyRes', () => {});
           },
         },
-        // Serve uploaded images through frontend (proxy to backend)
         '/uploads': {
           target: apiBaseUrl,
           changeOrigin: true,

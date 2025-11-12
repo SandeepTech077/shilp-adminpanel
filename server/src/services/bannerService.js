@@ -19,7 +19,7 @@ const getBanners = async () => {
   const expectedSections = [
     'homepageBanner', 'aboutUs', 'commercialBanner', 'plotBanner',
     'residentialBanner', 'contactBanners', 'careerBanner', 'ourTeamBanner',
-    'termsConditionsBanner', 'privacyPolicyBanner'
+    'termsConditionsBanner', 'privacyPolicyBanner', 'projectTreeBanner'
   ];
   
   // Check which sections are present
