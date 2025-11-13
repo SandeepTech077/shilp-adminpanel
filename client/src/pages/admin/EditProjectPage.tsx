@@ -50,6 +50,19 @@ interface ProjectFormData {
   shortAddress: string;
   projectStatusPercentage: number;
   
+  // Banner Section
+  bannerSection: {
+    desktopBannerImage: string;
+    mobileBannerImage: string;
+    alt: string;
+    desktopBannerFile?: File;
+    mobileBannerFile?: File;
+    desktopPreview?: string;
+    mobilePreview?: string;
+    existingDesktopBanner?: string;
+    existingMobileBanner?: string;
+  };
+  
   // About Us Details
   description1: string;
   description2: string;
@@ -128,6 +141,11 @@ export default function EditProjectPage() {
     cardLocation: '',
     shortAddress: '',
     projectStatusPercentage: 0,
+    bannerSection: {
+      desktopBannerImage: '',
+      mobileBannerImage: '',
+      alt: '',
+    },
     description1: '',
     description2: '',
     description3: '',
@@ -181,7 +199,7 @@ export default function EditProjectPage() {
           return;
         }
         
-        const project = response.data;
+        const project = response.data as any; // Temporarily using any for banner section
         
         if (!project) {
           setError('Project not found');
@@ -198,6 +216,13 @@ export default function EditProjectPage() {
           cardLocation: project.cardLocation || '',
           shortAddress: project.shortAddress || '',
           projectStatusPercentage: project.projectStatusPercentage || 0,
+          bannerSection: {
+            desktopBannerImage: project.bannerSection?.desktopBannerImage || '',
+            mobileBannerImage: project.bannerSection?.mobileBannerImage || '',
+            alt: project.bannerSection?.alt || '',
+            existingDesktopBanner: project.bannerSection?.desktopBannerImage,
+            existingMobileBanner: project.bannerSection?.mobileBannerImage,
+          },
           description1: project.aboutUsDetail?.description1 || '',
           description2: project.aboutUsDetail?.description2 || '',
           description3: project.aboutUsDetail?.description3 || '',
@@ -552,6 +577,15 @@ export default function EditProjectPage() {
       submitData.append('description3', formData.description3.trim());
       submitData.append('description4', formData.description4.trim());
       submitData.append('aboutUsAlt', formData.aboutImageAlt.trim());
+      
+      // Banner Section
+      submitData.append('bannerAlt', formData.bannerSection.alt.trim());
+      if (formData.bannerSection.desktopBannerFile) {
+        submitData.append('desktopBannerFile', formData.bannerSection.desktopBannerFile);
+      }
+      if (formData.bannerSection.mobileBannerFile) {
+        submitData.append('mobileBannerFile', formData.bannerSection.mobileBannerFile);
+      }
       
       // Only send about image if new image or delete flag
       if (formData.aboutImage) {
@@ -915,6 +949,151 @@ export default function EditProjectPage() {
               <label htmlFor="isActive" className="ml-3 text-sm font-semibold text-gray-900 cursor-pointer">
                 ✓ Project is Active
               </label>
+            </div>
+          </div>
+        </div>
+        
+        {/* Banner Section */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Banner Section</h2>
+          
+          <div className="space-y-6">
+            {/* Desktop Banner Image */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Desktop Banner Image *</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+                {(formData.bannerSection.desktopPreview || formData.bannerSection.existingDesktopBanner) ? (
+                  <div className="relative">
+                    <img 
+                      src={formData.bannerSection.desktopPreview || getImageUrl(formData.bannerSection.existingDesktopBanner)} 
+                      alt="Desktop Banner Preview" 
+                      className="max-w-full h-48 object-cover mx-auto rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          bannerSection: {
+                            ...prev.bannerSection,
+                            desktopBannerFile: undefined,
+                            desktopPreview: undefined,
+                          }
+                        }));
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const preview = URL.createObjectURL(file);
+                          setFormData(prev => ({
+                            ...prev,
+                            bannerSection: {
+                              ...prev.bannerSection,
+                              desktopBannerFile: file,
+                              desktopPreview: preview,
+                            }
+                          }));
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-8 h-8 text-purple-600 mb-2" />
+                      <span className="text-sm text-gray-600">Click to upload desktop banner image</span>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Mobile Banner Image */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">Mobile Banner Image *</label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+                {(formData.bannerSection.mobilePreview || formData.bannerSection.existingMobileBanner) ? (
+                  <div className="relative">
+                    <img 
+                      src={formData.bannerSection.mobilePreview || getImageUrl(formData.bannerSection.existingMobileBanner)} 
+                      alt="Mobile Banner Preview" 
+                      className="max-w-full h-48 object-cover mx-auto rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormData(prev => ({
+                          ...prev,
+                          bannerSection: {
+                            ...prev.bannerSection,
+                            mobileBannerFile: undefined,
+                            mobilePreview: undefined,
+                          }
+                        }));
+                      }}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="cursor-pointer block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const preview = URL.createObjectURL(file);
+                          setFormData(prev => ({
+                            ...prev,
+                            bannerSection: {
+                              ...prev.bannerSection,
+                              mobileBannerFile: file,
+                              mobilePreview: preview,
+                            }
+                          }));
+                        }
+                      }}
+                      className="hidden"
+                    />
+                    <div className="flex flex-col items-center">
+                      <Upload className="w-8 h-8 text-purple-600 mb-2" />
+                      <span className="text-sm text-gray-600">Click to upload mobile banner image</span>
+                    </div>
+                  </label>
+                )}
+              </div>
+            </div>
+
+            {/* Alt Text */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Banner Alt Text *</label>
+              <input
+                type="text"
+                name="bannerAlt"
+                value={formData.bannerSection.alt}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    bannerSection: {
+                      ...prev.bannerSection,
+                      alt: e.target.value,
+                    }
+                  }));
+                }}
+                required
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                placeholder="Enter descriptive alt text for banner images"
+              />
             </div>
           </div>
         </div>

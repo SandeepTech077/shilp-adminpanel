@@ -16,6 +16,16 @@ type AboutUsDetail = {
   };
 };
 
+type BannerSection = {
+  desktopBannerImage: string;
+  mobileBannerImage: string;
+  alt: string;
+  desktopBannerFile?: File;
+  mobileBannerFile?: File;
+  desktopPreview?: string;
+  mobilePreview?: string;
+};
+
 interface ProjectSection1Props {
   formData: {
     projectTitle: string;
@@ -25,6 +35,7 @@ interface ProjectSection1Props {
     projectType: ProjectType;
     shortAddress: string;
     projectStatusPercentage: number;
+    bannerSection: BannerSection;
     aboutUsDetail: AboutUsDetail;
   };
   validationErrors: Record<string, string>;
@@ -33,6 +44,9 @@ interface ProjectSection1Props {
   handleAboutUsImageUpload: (file: File) => void;
   removeAboutUsImage: () => void;
   handleBrochureUpload?: (file: File) => void;
+  handleBannerUpload: (type: 'desktop' | 'mobile', file: File) => void;
+  removeBannerImage: (type: 'desktop' | 'mobile') => void;
+  handleBannerChange: (field: string, value: string) => void;
 }
 
 const ProjectSection1: React.FC<ProjectSection1Props> = ({
@@ -42,7 +56,10 @@ const ProjectSection1: React.FC<ProjectSection1Props> = ({
   handleAboutUsChange,
   handleAboutUsImageUpload,
   removeAboutUsImage,
-  handleBrochureUpload
+  handleBrochureUpload,
+  handleBannerUpload,
+  removeBannerImage,
+  handleBannerChange
 }) => {
   return (
     <div className="space-y-8">
@@ -150,6 +167,112 @@ const ProjectSection1: React.FC<ProjectSection1Props> = ({
               </label>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Banner Section */}
+      <section className="bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-500">
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Banner Section</h2>
+        <div className="space-y-6">
+          {/* Desktop Banner Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Desktop Banner Image *</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+              {formData.bannerSection.desktopPreview ? (
+                <div className="relative">
+                  <img 
+                    src={formData.bannerSection.desktopPreview} 
+                    alt="Desktop Banner Preview" 
+                    className="max-w-full h-48 object-cover mx-auto rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeBannerImage('desktop')}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer block">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleBannerUpload('desktop', file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center">
+                    <svg className="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm text-gray-600">Click to upload desktop banner image</span>
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile Banner Image */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mobile Banner Image *</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+              {formData.bannerSection.mobilePreview ? (
+                <div className="relative">
+                  <img 
+                    src={formData.bannerSection.mobilePreview} 
+                    alt="Mobile Banner Preview" 
+                    className="max-w-full h-48 object-cover mx-auto rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeBannerImage('mobile')}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer block">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleBannerUpload('mobile', file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center">
+                    <svg className="w-8 h-8 text-purple-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm text-gray-600">Click to upload mobile banner image</span>
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Alt Text */}
+          <FormField
+            label="Banner Alt Text"
+            name="bannerAlt"
+            value={formData.bannerSection.alt}
+            onChange={(e) => handleBannerChange('alt', e.target.value)}
+            placeholder="Enter descriptive alt text for banner images"
+            required
+          />
         </div>
       </section>
 

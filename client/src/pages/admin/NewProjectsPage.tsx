@@ -55,6 +55,16 @@ type AboutUsDetail = {
   };
 };
 
+type BannerSection = {
+  desktopBannerImage: string;
+  mobileBannerImage: string;
+  alt: string;
+  desktopBannerFile?: File;
+  mobileBannerFile?: File;
+  desktopPreview?: string;
+  mobilePreview?: string;
+};
+
 type FormData = {
   projectTitle: string;
   slug: string;
@@ -63,6 +73,7 @@ type FormData = {
   projectType: ProjectType;
   shortAddress: string;
   projectStatusPercentage: number;
+  bannerSection: BannerSection;
   aboutUsDetail: AboutUsDetail;
   floorPlans: FloorPlan[];
   projectImages: ImageItem[];
@@ -103,6 +114,11 @@ const ProjectAdminForm = () => {
     projectType: 'residential',
     shortAddress: '',
     projectStatusPercentage: 0,
+    bannerSection: {
+      desktopBannerImage: '',
+      mobileBannerImage: '',
+      alt: '',
+    },
     aboutUsDetail: {
       description1: '',
       description2: '',
@@ -135,60 +151,7 @@ const ProjectAdminForm = () => {
         svgOrImage: '',
         alt: '',
       },
-      {
-        id: Date.now().toString() + '_2',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_3',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_4',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_5',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_6',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_7',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_8',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_9',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
-      {
-        id: Date.now().toString() + '_10',
-        title: '',
-        svgOrImage: '',
-        alt: '',
-      },
+
     ],
     youtubeUrl: '',
     updatedImagesTitle: '',
@@ -196,13 +159,7 @@ const ProjectAdminForm = () => {
       { id: Date.now().toString() + '_u1', image: '', alt: '' },
       { id: Date.now().toString() + '_u2', image: '', alt: '' },
       { id: Date.now().toString() + '_u3', image: '', alt: '' },
-      { id: Date.now().toString() + '_u4', image: '', alt: '' },
-      { id: Date.now().toString() + '_u5', image: '', alt: '' },
-      { id: Date.now().toString() + '_u6', image: '', alt: '' },
-      { id: Date.now().toString() + '_u7', image: '', alt: '' },
-      { id: Date.now().toString() + '_u8', image: '', alt: '' },
-      { id: Date.now().toString() + '_u9', image: '', alt: '' },
-      { id: Date.now().toString() + '_u10', image: '', alt: '' },
+    
     ],
     locationTitle: '',
     locationTitleText: '',
@@ -249,6 +206,11 @@ const ProjectAdminForm = () => {
       projectType: 'residential',
       shortAddress: '',
       projectStatusPercentage: 0,
+      bannerSection: {
+        desktopBannerImage: '',
+        mobileBannerImage: '',
+        alt: '',
+      },
       aboutUsDetail: {
         description1: '',
         description2: '',
@@ -385,6 +347,46 @@ const ProjectAdminForm = () => {
           file: undefined,
           preview: undefined,
         },
+      },
+    }));
+  };
+
+  // Banner Section handlers
+  const handleBannerUpload = (type: 'desktop' | 'mobile', file: File) => {
+    const preview = URL.createObjectURL(file);
+    const fieldName = type === 'desktop' ? 'desktopBannerFile' : 'mobileBannerFile';
+    const previewName = type === 'desktop' ? 'desktopPreview' : 'mobilePreview';
+    
+    setFormData(prev => ({
+      ...prev,
+      bannerSection: {
+        ...prev.bannerSection,
+        [fieldName]: file,
+        [previewName]: preview,
+      },
+    }));
+  };
+
+  const removeBannerImage = (type: 'desktop' | 'mobile') => {
+    const fieldName = type === 'desktop' ? 'desktopBannerFile' : 'mobileBannerFile';
+    const previewName = type === 'desktop' ? 'desktopPreview' : 'mobilePreview';
+    
+    setFormData(prev => ({
+      ...prev,
+      bannerSection: {
+        ...prev.bannerSection,
+        [fieldName]: undefined,
+        [previewName]: undefined,
+      },
+    }));
+  };
+
+  const handleBannerChange = (field: string, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      bannerSection: {
+        ...prev.bannerSection,
+        [field]: value,
       },
     }));
   };
@@ -951,6 +953,7 @@ const ProjectAdminForm = () => {
                 projectType: formData.projectType,
                 shortAddress: formData.shortAddress,
                 projectStatusPercentage: formData.projectStatusPercentage,
+                bannerSection: formData.bannerSection,
                 aboutUsDetail: formData.aboutUsDetail,
               }}
               validationErrors={validationErrors}
@@ -959,6 +962,9 @@ const ProjectAdminForm = () => {
               handleAboutUsImageUpload={handleAboutUsImageUpload}
               removeAboutUsImage={removeAboutUsImage}
               handleBrochureUpload={(file: File) => handleFileUpload(file, 'brochureFile')}
+              handleBannerUpload={handleBannerUpload}
+              removeBannerImage={removeBannerImage}
+              handleBannerChange={handleBannerChange}
             />
           </Suspense>
         );

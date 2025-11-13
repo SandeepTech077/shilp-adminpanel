@@ -405,6 +405,45 @@ class ProjectService {
         }
       }
 
+      // Process banner section images
+      // Desktop banner image
+      if (files.desktopBannerFile && files.desktopBannerFile[0]) {
+        const desktopBannerPath = await this.saveFile(files.desktopBannerFile[0], uploadDir, 'banner-desktop', projectFolderName);
+        
+        if (!processedData.bannerSection) {
+          processedData.bannerSection = {
+            desktopBannerImage: '',
+            mobileBannerImage: '',
+            alt: ''
+          };
+        }
+        processedData.bannerSection.desktopBannerImage = desktopBannerPath;
+        
+        // Delete old desktop banner if updating
+        if (existingProject && existingProject.bannerSection && existingProject.bannerSection.desktopBannerImage) {
+          await this.deleteFile(existingProject.bannerSection.desktopBannerImage);
+        }
+      }
+
+      // Mobile banner image
+      if (files.mobileBannerFile && files.mobileBannerFile[0]) {
+        const mobileBannerPath = await this.saveFile(files.mobileBannerFile[0], uploadDir, 'banner-mobile', projectFolderName);
+        
+        if (!processedData.bannerSection) {
+          processedData.bannerSection = {
+            desktopBannerImage: '',
+            mobileBannerImage: '',
+            alt: ''
+          };
+        }
+        processedData.bannerSection.mobileBannerImage = mobileBannerPath;
+        
+        // Delete old mobile banner if updating
+        if (existingProject && existingProject.bannerSection && existingProject.bannerSection.mobileBannerImage) {
+          await this.deleteFile(existingProject.bannerSection.mobileBannerImage);
+        }
+      }
+
       // Process floor plan images - handle both create and update
       if (files.floorPlanImages && files.floorPlanImages.length > 0 && processedData.floorPlans) {
         console.log('🏗️ Processing floor plan images:', {

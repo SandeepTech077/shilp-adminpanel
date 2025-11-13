@@ -28,21 +28,19 @@ const getAllProjects = async (req, res) => {
     if (status) filters.status = status;
     if (search) filters.search = search;
 
-    const projects = await projectService.getAllProjects(
-      filters,
-      parseInt(page),
-      parseInt(limit)
-    );
+    const options = {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      filter: filters,
+      sort: { createdAt: -1 }
+    };
+
+    const result = await projectService.getAllProjects(options);
     
     res.status(200).json({
       success: true,
-      data: projects.projects,
-      pagination: {
-        currentPage: projects.currentPage,
-        totalPages: projects.totalPages,
-        totalProjects: projects.totalProjects,
-        hasMore: projects.hasMore
-      }
+      data: result.data,
+      pagination: result.pagination
     });
   } catch (error) {
     res.status(500).json({
@@ -130,7 +128,7 @@ const getAllProjectTree = async (req, res) => {
     if (category) filters.category = category;
     if (search) filters.search = search;
 
-    const projectTree = await projectTreeService.getAllProjectTree(filters);
+    const projectTree = await projectTreeService.getAllProjectTrees(filters);
     
     res.status(200).json({
       success: true,

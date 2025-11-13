@@ -77,6 +77,25 @@ const projectSchema = new mongoose.Schema({
       }
     }
   },
+
+  // Banner Section
+  bannerSection: {
+    desktopBannerImage: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    mobileBannerImage: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    alt: {
+      type: String,
+      trim: true,
+      default: ''
+    }
+  },
   
   // Floor Plans
   floorPlans: [{

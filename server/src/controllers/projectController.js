@@ -481,6 +481,13 @@ class ProjectController {
       }
     };
 
+    // Parse bannerSection
+    parsed.bannerSection = {
+      desktopBannerImage: body.desktopBannerImage || '',
+      mobileBannerImage: body.mobileBannerImage || '',
+      alt: body.bannerAlt || ''
+    };
+
     // Parse JSON arrays from form data
     try {
       // Parse floor plans JSON - handle update format
