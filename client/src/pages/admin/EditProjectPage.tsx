@@ -490,12 +490,42 @@ export default function EditProjectPage() {
   }, []);
 
 
-  // Form submission - optimized
+  // Form submission - optimized to only send updated data
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!id) {
       setError('Project ID not found');
+      return;
+    }
+
+    // Validation
+    if (!formData.projectTitle.trim()) {
+      setError('Project title is required');
+      return;
+    }
+    if (!formData.slug.trim()) {
+      setError('Slug is required');
+      return;
+    }
+    if (!formData.shortAddress.trim()) {
+      setError('Short address is required');
+      return;
+    }
+    if (!formData.description1.trim()) {
+      setError('Description 1 is required');
+      return;
+    }
+    if (!formData.locationTitle.trim()) {
+      setError('Location title is required');
+      return;
+    }
+    if (!formData.locationTitleText.trim()) {
+      setError('Location title text is required');
+      return;
+    }
+    if (!formData.mapIframeUrl.trim()) {
+      setError('Map iframe URL is required');
       return;
     }
     
@@ -505,52 +535,69 @@ export default function EditProjectPage() {
       
       const submitData = new FormData();
       
-      // Basic fields
-      submitData.append('projectTitle', formData.projectTitle);
-      submitData.append('slug', formData.slug);
+      // Basic fields - always send these as they might have changed
+      submitData.append('projectTitle', formData.projectTitle.trim());
+      submitData.append('slug', formData.slug.trim());
       submitData.append('projectType', formData.projectType);
       submitData.append('projectState', formData.projectState);
-      submitData.append('cardAreaFt', formData.cardAreaFt);
-      submitData.append('cardLocation', formData.cardLocation);
-      submitData.append('shortAddress', formData.shortAddress);
+      submitData.append('cardAreaFt', formData.cardAreaFt.trim());
+      submitData.append('cardLocation', formData.cardLocation.trim());
+      submitData.append('shortAddress', formData.shortAddress.trim());
       submitData.append('projectStatusPercentage', formData.projectStatusPercentage.toString());
       submitData.append('isActive', String(formData.isActive));
       
       // About Us Details - send as flat fields, backend will restructure
-      submitData.append('description1', formData.description1);
-      submitData.append('description2', formData.description2);
-      submitData.append('description3', formData.description3);
-      submitData.append('description4', formData.description4);
-      submitData.append('aboutUsAlt', formData.aboutImageAlt);
+      submitData.append('description1', formData.description1.trim());
+      submitData.append('description2', formData.description2.trim());
+      submitData.append('description3', formData.description3.trim());
+      submitData.append('description4', formData.description4.trim());
+      submitData.append('aboutUsAlt', formData.aboutImageAlt.trim());
+      
+      // Only send about image if new image or delete flag
       if (formData.aboutImage) {
         submitData.append('aboutUsImage', formData.aboutImage);
       }
-      if (formData.deleteAboutImage) submitData.append('deleteAboutImage', 'true');
+      if (formData.deleteAboutImage) {
+        submitData.append('deleteAboutImage', 'true');
+      }
       
-      // Card Image
+      // Only send card image if new image or delete flag
       if (formData.cardImage) {
         submitData.append('cardImage', formData.cardImage);
       }
-      if (formData.deleteCardImage) submitData.append('deleteCardImage', 'true');
+      if (formData.deleteCardImage) {
+        submitData.append('deleteCardImage', 'true');
+      }
       submitData.append('cardProjectType', formData.cardProjectType);
       submitData.append('cardHouse', formData.cardHouse);
       
-      // Brochure
+      // Only send brochure if new file or delete flag
       if (formData.brochure) {
         submitData.append('brochure', formData.brochure);
       }
-      if (formData.deleteBrochure) submitData.append('deleteBrochure', 'true');
+      if (formData.deleteBrochure) {
+        submitData.append('deleteBrochure', 'true');
+      }
       
       // Floor Plans - send deletions
       formData.deleteFloorPlans.forEach(id => {
         submitData.append('deleteFloorPlans[]', id);
       });
-      // Floor Plans - send new/updated
+      
+      // Floor Plans - send all current floor plans (existing + new)
+      const allFloorPlans = formData.floorPlans.map(fp => ({
+        id: fp.id,
+        title: fp.title.trim(),
+        alt: fp.alt.trim(),
+        image: fp.image || '',
+        hasNewFile: !!fp.file
+      }));
+      submitData.append('floorPlans', JSON.stringify(allFloorPlans));
+      
+      // Floor Plan images - only send new files
       formData.floorPlans.forEach((fp) => {
         if (fp.file) {
-          submitData.append('floorPlans[title]', fp.title);
-          submitData.append('floorPlans[alt]', fp.alt);
-          submitData.append('floorPlanImages', fp.file);
+          submitData.append('floorPlanImages', fp.file!);
         }
       });
       
@@ -558,11 +605,20 @@ export default function EditProjectPage() {
       formData.deleteProjectImages.forEach(id => {
         submitData.append('deleteProjectImages[]', id);
       });
-      // Project Images - send new/updated
+      
+      // Project Images - send all current images (existing + new)
+      const allProjectImages = formData.projectImages.map(img => ({
+        id: img.id,
+        alt: img.alt.trim(),
+        image: img.image || '',
+        hasNewFile: !!img.file
+      }));
+      submitData.append('projectImages', JSON.stringify(allProjectImages));
+      
+      // Project image files - only send new files
       formData.projectImages.forEach((img) => {
         if (img.file) {
-          submitData.append('projectImages[alt]', img.alt);
-          submitData.append('projectImageFiles', img.file);
+          submitData.append('projectImageFiles', img.file!);
         }
       });
       
@@ -570,38 +626,57 @@ export default function EditProjectPage() {
       formData.deleteAmenities.forEach(id => {
         submitData.append('deleteAmenities[]', id);
       });
-      // Amenities - send new/updated
+      
+      // Amenities - send all current amenities (existing + new)
+      const allAmenities = formData.amenities.map(am => ({
+        id: am.id,
+        title: am.title.trim(),
+        alt: am.alt.trim(),
+        svgOrImage: am.svgOrImage || '',
+        hasNewFile: !!am.file
+      }));
+      submitData.append('amenities', JSON.stringify(allAmenities));
+      
+      // Amenity images - only send new files
       formData.amenities.forEach((am) => {
         if (am.file) {
-          submitData.append('amenities[title]', am.title);
-          submitData.append('amenities[alt]', am.alt);
-          submitData.append('amenityImages', am.file);
+          submitData.append('amenityFiles', am.file!);
         }
       });
       
       // Updated Images
-      submitData.append('updatedImagesTitle', formData.updatedImagesTitle);
+      submitData.append('updatedImagesTitle', formData.updatedImagesTitle.trim());
       formData.deleteUpdatedImages.forEach(id => {
         submitData.append('deleteUpdatedImages[]', id);
       });
+      
+      // Updated Images - send all current images (existing + new)
+      const allUpdatedImages = formData.updatedImages.map(img => ({
+        id: img.id,
+        alt: img.alt.trim(),
+        image: img.image || '',
+        hasNewFile: !!img.file
+      }));
+      submitData.append('updatedImages', JSON.stringify(allUpdatedImages));
+      
+      // Updated image files - only send new files
       formData.updatedImages.forEach((img) => {
         if (img.file) {
-          submitData.append('updatedImages[alt]', img.alt);
-          submitData.append('updatedImageFiles', img.file);
+          submitData.append('updatedImageFiles', img.file!);
         }
       });
       
-      // Location & Contact
-      submitData.append('youtubeUrl', formData.youtubeUrl);
-      submitData.append('locationTitle', formData.locationTitle);
-      submitData.append('locationTitleText', formData.locationTitleText);
-      submitData.append('locationArea', formData.locationArea);
-      submitData.append('number1', formData.number1);
-      submitData.append('number2', formData.number2);
-      submitData.append('email1', formData.email1);
-      submitData.append('email2', formData.email2);
-      submitData.append('mapIframeUrl', formData.mapIframeUrl);
-      submitData.append('reraNumber', formData.reraNumber);
+      // Location & Contact - YouTube URL is optional now
+      submitData.append('youtubeUrl', formData.youtubeUrl.trim());
+      submitData.append('locationTitle', formData.locationTitle.trim());
+      submitData.append('locationTitleText', formData.locationTitleText.trim());
+      submitData.append('locationArea', formData.locationArea.trim());
+      submitData.append('number1', formData.number1.trim());
+      submitData.append('number2', formData.number2.trim());
+      submitData.append('email1', formData.email1.trim());
+      submitData.append('email2', formData.email2.trim());
+      submitData.append('mapIframeUrl', formData.mapIframeUrl.trim());
+      submitData.append('reraNumber', formData.reraNumber.trim());
       
       const response = await updateProject(id, submitData);
       
@@ -619,7 +694,7 @@ export default function EditProjectPage() {
       
       setShowSuccess(true);
       setTimeout(() => {
-        navigate(`/admin/projects/${formData.projectType}`);
+        navigate(-1);
       }, 1500);
     } catch (err) {
       console.error('❌ Failed to update project:', err);
@@ -1392,7 +1467,7 @@ export default function EditProjectPage() {
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">YouTube URL</label>
               <input
-                type="url"
+                type="text"
                 name="youtubeUrl"
                 value={formData.youtubeUrl}
                 onChange={handleInputChange}

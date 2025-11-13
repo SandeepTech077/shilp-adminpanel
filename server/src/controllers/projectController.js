@@ -9,9 +9,22 @@ class ProjectController {
    */
   createProject = async (req, res) => {
     try {
+      console.log('🚀 Server: Project creation started');
+      console.log('📥 Server: Request body keys:', Object.keys(req.body));
+      console.log('📎 Server: Files received:', req.files ? req.files.length : 'No files');
+      
+      // Debug: Log all received files with their fieldnames
+      if (req.files && req.files.length > 0) {
+        console.log('📋 Server: File details:');
+        req.files.forEach((file, index) => {
+          console.log(`  ${index}: ${file.fieldname} - ${file.originalname} (${file.size} bytes)`);
+        });
+      }
+      
       // Check for validation errors
       const errors = validationResult(req);
       if (!errors.isEmpty()) {
+        console.log('❌ Server: Validation errors:', errors.array());
         return res.status(400).json({
           success: false,
           message: 'Validation failed',
@@ -19,17 +32,16 @@ class ProjectController {
         });
       }
 
-      // Debug logs removed to reduce console output
+      console.log('✅ Server: Validation passed');
 
       // Parse form data
       const parsedData = this.parseFormData(req.body);
-      
-      // DEBUG: Log parsed aboutUsDetail
+      console.log('📋 Server: Parsed data keys:', Object.keys(parsedData));
+      console.log('📖 Server: About Us Detail:', parsedData.aboutUsDetail);
       
       // Add unique slug generation
       parsedData.slug = await this.generateUniqueSlug(parsedData.projectTitle);
-      
-  // Parsed data prepared for project creation
+      console.log('🏷️ Server: Generated slug:', parsedData.slug);
       
       // Ensure mobile numbers have +91 prefix (if not already present)
       if (parsedData.number1) {
@@ -45,6 +57,7 @@ class ProjectController {
 
       // Ensure slug is not empty or null
       if (!parsedData.slug || parsedData.slug.trim() === '') {
+        console.log('❌ Server: Empty slug detected');
         return res.status(400).json({
           success: false,
           message: 'Slug is required and cannot be empty',
@@ -52,8 +65,23 @@ class ProjectController {
         });
       }
 
+      console.log('🔧 Server: Calling project service...');
+      
+      // Organize files by fieldname since upload.any() returns array
+      const organizedFiles = {};
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          if (!organizedFiles[file.fieldname]) {
+            organizedFiles[file.fieldname] = [];
+          }
+          organizedFiles[file.fieldname].push(file);
+        });
+        console.log('📁 Server: Organized files:', Object.keys(organizedFiles));
+      }
+      
       // Create project with uploaded files
-      const result = await projectService.createProject(parsedData, req.files);
+      const result = await projectService.createProject(parsedData, organizedFiles);
+      console.log('✅ Server: Project created successfully:', result);
 
       res.status(201).json(result);
     } catch (error) {
@@ -274,9 +302,31 @@ class ProjectController {
 
       // Parse array data from form
       const updateData = this.parseFormData(req.body);
+      
+      console.log('🔧 Server: Update project files received:', req.files ? req.files.length : 'No files');
+      
+      // Debug: Log all received files with their fieldnames
+      if (req.files && req.files.length > 0) {
+        console.log('📋 Server: Update file details:');
+        req.files.forEach((file, index) => {
+          console.log(`  ${index}: ${file.fieldname} - ${file.originalname} (${file.size} bytes)`);
+        });
+      }
+
+      // Organize files by fieldname since upload.any() returns array
+      const organizedFiles = {};
+      if (req.files && req.files.length > 0) {
+        req.files.forEach(file => {
+          if (!organizedFiles[file.fieldname]) {
+            organizedFiles[file.fieldname] = [];
+          }
+          organizedFiles[file.fieldname].push(file);
+        });
+        console.log('📁 Server: Organized update files:', Object.keys(organizedFiles));
+      }
 
       // Update project with uploaded files
-      const result = await projectService.updateProject(id, updateData, req.files);
+      const result = await projectService.updateProject(id, updateData, organizedFiles);
 
       res.json(result);
     } catch (error) {
@@ -425,13 +475,105 @@ class ProjectController {
       description2: body.description2 || '',
       description3: body.description3 || '',
       description4: body.description4 || '',
-      image: { alt: body.aboutUsAlt || '' }
+      image: { 
+        url: body.aboutUsUrl || '',
+        alt: body.aboutUsAlt || '' 
+      }
     };
 
+    // Parse JSON arrays from form data
+    try {
+      // Parse floor plans JSON - handle update format
+      if (body.floorPlans && typeof body.floorPlans === 'string') {
+        const floorPlansData = JSON.parse(body.floorPlans);
+        parsed.floorPlans = floorPlansData
+          .filter(fp => fp.title && fp.title.trim()) // Only include floor plans with titles
+          .map(fp => ({
+            id: fp.id,
+            title: fp.title || '',
+            image: fp.image || '',
+            alt: fp.alt || '',
+            hasNewFile: fp.hasNewFile || false
+            // Remove file, preview, and other client-side properties
+          }));
+      } else {
+        parsed.floorPlans = []; // Default to empty array if not provided
+      }
 
+      // Parse project images JSON - handle update format
+      if (body.projectImages && typeof body.projectImages === 'string') {
+        const projectImagesData = JSON.parse(body.projectImages);
+        parsed.projectImages = projectImagesData
+          .filter(img => img.alt && img.alt.trim()) // Only include images with alt text
+          .map(img => ({
+            id: img.id,
+            image: img.image || '',
+            alt: img.alt || '',
+            hasNewFile: img.hasNewFile || false
+            // Remove file, preview, and other client-side properties
+          }));
+      } else {
+        parsed.projectImages = []; // Default to empty array if not provided
+      }
+
+      // Parse amenities JSON - handle update format
+      if (body.amenities && typeof body.amenities === 'string') {
+        if (body.amenities === 'null') {
+          parsed.amenities = []; // Use empty array instead of null
+        } else {
+          const amenitiesData = JSON.parse(body.amenities);
+          // Remove temporary client-side properties and clean up data
+          if (amenitiesData && Array.isArray(amenitiesData)) {
+            parsed.amenities = amenitiesData
+              .filter(amenity => amenity.title && amenity.title.trim()) // Only include amenities with titles
+              .map(amenity => ({
+                id: amenity.id,
+                title: amenity.title || '',
+                svgOrImage: amenity.svgOrImage || '',
+                alt: amenity.alt || '',
+                hasNewFile: amenity.hasNewFile || false
+                // Remove file, preview, and other client-side properties
+              }));
+          } else {
+            parsed.amenities = []; // Fallback to empty array
+          }
+        }
+      } else {
+        parsed.amenities = []; // Default to empty array if not provided
+      }
+
+      // Parse updated images JSON - handle update format
+      if (body.updatedImages && typeof body.updatedImages === 'string') {
+        const updatedImagesData = JSON.parse(body.updatedImages);
+        parsed.updatedImages = updatedImagesData
+          .filter(img => img.alt && img.alt.trim()) // Only include images with alt text
+          .map(img => ({
+            id: img.id,
+            image: img.image || '',
+            alt: img.alt || '',
+            hasNewFile: img.hasNewFile || false
+            // Remove file, preview, and other client-side properties
+          }));
+      } else {
+        parsed.updatedImages = []; // Default to empty array if not provided
+      }
+
+    } catch (error) {
+      console.error('Error parsing JSON arrays in form data:', error);
+      throw new Error('Invalid JSON data in form submission');
+    }
+
+    // Debug logging for parsed arrays
+    console.log('🔧 Server: Parsed arrays:');
+    console.log('floorPlans:', parsed.floorPlans ? `${parsed.floorPlans.length} items` : 'null/undefined');
+    console.log('projectImages:', parsed.projectImages ? `${parsed.projectImages.length} items` : 'null/undefined');
+    console.log('amenities:', parsed.amenities ? `${parsed.amenities.length} items` : 'null/undefined');
+    console.log('updatedImages:', parsed.updatedImages ? `${parsed.updatedImages.length} items` : 'null/undefined');
+
+    // Legacy form-encoded array parsing (keep as fallback)
     // Parse floor plans array
     const floorPlanKeys = Object.keys(body).filter(key => key.startsWith('floorPlans['));
-    if (floorPlanKeys.length > 0) {
+    if (floorPlanKeys.length > 0 && !parsed.floorPlans) {
       parsed.floorPlans = [];
       floorPlanKeys.forEach(key => {
         const match = key.match(/floorPlans\[(\d+)\]\[(\w+)\]/);
@@ -449,7 +591,7 @@ class ProjectController {
 
     // Parse project images array
     const projectImageKeys = Object.keys(body).filter(key => key.startsWith('projectImages['));
-    if (projectImageKeys.length > 0) {
+    if (projectImageKeys.length > 0 && !parsed.projectImages) {
       parsed.projectImages = [];
       projectImageKeys.forEach(key => {
         const match = key.match(/projectImages\[(\d+)\]\[(\w+)\]/);
@@ -467,7 +609,7 @@ class ProjectController {
 
     // Parse amenities array
     const amenityKeys = Object.keys(body).filter(key => key.startsWith('amenities['));
-    if (amenityKeys.length > 0) {
+    if (amenityKeys.length > 0 && !parsed.amenities) {
       parsed.amenities = [];
       amenityKeys.forEach(key => {
         const match = key.match(/amenities\[(\d+)\]\[(\w+)\]/);
@@ -485,7 +627,7 @@ class ProjectController {
 
     // Parse updated images array
     const updatedImageKeys = Object.keys(body).filter(key => key.startsWith('updatedImages['));
-    if (updatedImageKeys.length > 0) {
+    if (updatedImageKeys.length > 0 && !parsed.updatedImages) {
       parsed.updatedImages = [];
       updatedImageKeys.forEach(key => {
         const match = key.match(/updatedImages\[(\d+)\]\[(\w+)\]/);

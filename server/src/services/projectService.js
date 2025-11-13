@@ -193,14 +193,20 @@ class ProjectService {
         }
       }
 
-      // Process file uploads
+      // Process file uploads and handle deletions
       const processedData = await this.processFileUploads(updateData, files, existingProject);
       
+      // Handle specific deletions before merging with existing data
+      await this.handleSpecificDeletions(updateData, existingProject, processedData);
+      
+      // Merge with existing data to preserve non-updated fields
+      const finalData = this.mergeWithExistingData(processedData, existingProject);
+      
       // Extract only new file paths (excluding existing ones)
-      newSavedFiles = this.extractNewFilePaths(processedData, existingProject);
+      newSavedFiles = this.extractNewFilePaths(finalData, existingProject);
 
       // Update project
-      const updatedProject = await projectRepository.update(id, processedData);
+      const updatedProject = await projectRepository.update(id, finalData);
       
       return {
         success: true,
@@ -227,21 +233,27 @@ class ProjectService {
         throw new Error('Project not found');
       }
 
+      console.log(`🗑️ Deleting project: ${project.title || id} (${soft ? 'soft' : 'permanent'} delete)`);
+
       let result;
       if (soft) {
+        console.log(`📝 Performing soft delete - project will be deactivated but images preserved`);
         result = await projectRepository.softDelete(id);
       } else {
+        console.log(`⚠️ Performing PERMANENT delete - all project data and images will be removed`);
         // Clean up files before hard delete
         await this.cleanupProjectFiles(project);
         result = await projectRepository.delete(id);
       }
       
+      console.log(`✅ Successfully ${soft ? 'deactivated' : 'deleted'} project: ${project.title || id}`);
       return {
         success: true,
         message: `Project ${soft ? 'deactivated' : 'deleted'} successfully`,
         data: result
       };
     } catch (error) {
+      console.error(`❌ Error deleting project ${id}:`, error.message);
       throw error;
     }
   }
@@ -322,6 +334,14 @@ class ProjectService {
   async processFileUploads(data, files = {}, existingProject = null) {
     const processedData = { ...data };
     
+    console.log('🔧 Processing file uploads...');
+    console.log('📁 Files received:', files ? Object.keys(files) : 'No files');
+    console.log('📁 Files details:', files ? Object.keys(files).map(key => ({
+      field: key,
+      count: Array.isArray(files[key]) ? files[key].length : 1,
+      names: Array.isArray(files[key]) ? files[key].map(f => f.originalname) : [files[key]?.originalname]
+    })) : 'No file details');
+    console.log('🏗️ Is Update?', !!existingProject);
     
     // Create project-specific folder based on projectTitle
     const projectFolderName = this.createSafeDirectoryName(data.projectTitle || existingProject?.projectTitle || 'untitled');
@@ -385,110 +405,134 @@ class ProjectService {
         }
       }
 
-      // Process floor plan images
-      if (files.floorPlanImages && files.floorPlanImages.length > 0) {
-        const floorPlanPaths = [];
-        for (let i = 0; i < files.floorPlanImages.length; i++) {
-          const floorPlanPath = await this.saveFile(files.floorPlanImages[i], uploadDir, `floorplan_${i + 1}`, projectFolderName);
-          floorPlanPaths.push(floorPlanPath);
-        }
-
-        // Update floor plan data with image paths
-        if (processedData.floorPlans && Array.isArray(processedData.floorPlans)) {
-          processedData.floorPlans.forEach((plan, index) => {
-            if (floorPlanPaths[index]) {
-              plan.image = floorPlanPaths[index];
+      // Process floor plan images - handle both create and update
+      if (files.floorPlanImages && files.floorPlanImages.length > 0 && processedData.floorPlans) {
+        console.log('🏗️ Processing floor plan images:', {
+          filesCount: files.floorPlanImages.length,
+          floorPlansCount: processedData.floorPlans.length,
+          isUpdate: !!existingProject
+        });
+        
+        let fileIndex = 0;
+        for (let i = 0; i < processedData.floorPlans.length; i++) {
+          const plan = processedData.floorPlans[i];
+          // For create: process all plans that have data, for update: only process if hasNewFile flag
+          const shouldProcess = existingProject ? plan.hasNewFile : true; // Always process in create mode
+          console.log(`Floor plan ${i}:`, { title: plan.title, alt: plan.alt, shouldProcess, fileIndex });
+          
+          if (shouldProcess && fileIndex < files.floorPlanImages.length) {
+            // Delete old image if updating and exists
+            if (existingProject && plan.id) {
+              const existingPlan = existingProject.floorPlans?.find(fp => fp.id?.toString() === plan.id || fp._id?.toString() === plan.id);
+              if (existingPlan && existingPlan.image) {
+                console.log(`🗑️ Deleting old floor plan image: ${existingPlan.image}`);
+                await this.deleteFile(existingPlan.image);
+              }
             }
-          });
-        }
-
-        // Delete old floor plan images if updating
-        if (existingProject && existingProject.floorPlans) {
-          for (const plan of existingProject.floorPlans) {
-            if (plan.image) {
-              await this.deleteFile(plan.image);
-            }
+            
+            const floorPlanPath = await this.saveFile(files.floorPlanImages[fileIndex], uploadDir, `floorplan_${Date.now()}_${i}`, projectFolderName);
+            plan.image = floorPlanPath;
+            console.log(`✅ Saved floor plan image: ${floorPlanPath}`);
+            fileIndex++;
           }
         }
       }
 
-      // Process project images
-      if (files.projectImageFiles && files.projectImageFiles.length > 0) {
-        const projectImagePaths = [];
-        for (let i = 0; i < files.projectImageFiles.length; i++) {
-          const projectImagePath = await this.saveFile(files.projectImageFiles[i], uploadDir, `project_${i + 1}`, projectFolderName);
-          projectImagePaths.push(projectImagePath);
-        }
-
-        // Update project image data with image paths
-        if (processedData.projectImages && Array.isArray(processedData.projectImages)) {
-          processedData.projectImages.forEach((img, index) => {
-            if (projectImagePaths[index]) {
-              img.image = projectImagePaths[index];
+      // Process project images - handle both create and update
+      if (files.projectImageFiles && files.projectImageFiles.length > 0 && processedData.projectImages) {
+        console.log('📸 Processing project images:', {
+          filesCount: files.projectImageFiles.length,
+          projectImagesCount: processedData.projectImages.length,
+          isUpdate: !!existingProject
+        });
+        
+        let fileIndex = 0;
+        for (let i = 0; i < processedData.projectImages.length; i++) {
+          const img = processedData.projectImages[i];
+          // For create: process all images, for update: only process if hasNewFile flag
+          const shouldProcess = existingProject ? img.hasNewFile : true; // Always process in create mode
+          console.log(`Project image ${i}:`, { alt: img.alt, shouldProcess, fileIndex });
+          
+          if (shouldProcess && fileIndex < files.projectImageFiles.length) {
+            // Delete old image if updating and exists
+            if (existingProject && img.id) {
+              const existingImg = existingProject.projectImages?.find(pImg => pImg.id?.toString() === img.id || pImg._id?.toString() === img.id);
+              if (existingImg && existingImg.image) {
+                console.log(`🗑️ Deleting old project image: ${existingImg.image}`);
+                await this.deleteFile(existingImg.image);
+              }
             }
-          });
-        }
-
-        // Delete old project images if updating
-        if (existingProject && existingProject.projectImages) {
-          for (const img of existingProject.projectImages) {
-            if (img.image) {
-              await this.deleteFile(img.image);
-            }
+            
+            const projectImagePath = await this.saveFile(files.projectImageFiles[fileIndex], uploadDir, `project_${Date.now()}_${i}`, projectFolderName);
+            img.image = projectImagePath;
+            console.log(`✅ Saved project image: ${projectImagePath}`);
+            fileIndex++;
           }
         }
       }
 
-      // Process amenity files
-      if (files.amenityFiles && files.amenityFiles.length > 0) {
-        const amenityPaths = [];
-        for (let i = 0; i < files.amenityFiles.length; i++) {
-          const amenityPath = await this.saveFile(files.amenityFiles[i], uploadDir, `amenity_${i + 1}`, projectFolderName);
-          amenityPaths.push(amenityPath);
-        }
-
-        // Update amenity data with image paths
-        if (processedData.amenities && Array.isArray(processedData.amenities)) {
-          processedData.amenities.forEach((amenity, index) => {
-            if (amenityPaths[index]) {
-              amenity.svgOrImage = amenityPaths[index];
+      // Process amenity images - handle both create and update
+      if (files.amenityFiles && files.amenityFiles.length > 0 && processedData.amenities) {
+        console.log('🏠 Processing amenity images:', {
+          filesCount: files.amenityFiles.length,
+          amenitiesCount: processedData.amenities.length,
+          isUpdate: !!existingProject
+        });
+        
+        let fileIndex = 0;
+        for (let i = 0; i < processedData.amenities.length; i++) {
+          const amenity = processedData.amenities[i];
+          // For create: process all amenities, for update: only process if hasNewFile flag
+          const shouldProcess = existingProject ? amenity.hasNewFile : true; // Always process in create mode
+          console.log(`Amenity ${i}:`, { title: amenity.title, alt: amenity.alt, shouldProcess, fileIndex });
+          
+          if (shouldProcess && fileIndex < files.amenityFiles.length) {
+            // Delete old image if updating and exists
+            if (existingProject && amenity.id) {
+              const existingAmenity = existingProject.amenities?.find(am => am.id?.toString() === amenity.id || am._id?.toString() === amenity.id);
+              if (existingAmenity && existingAmenity.svgOrImage) {
+                console.log(`🗑️ Deleting old amenity image: ${existingAmenity.svgOrImage}`);
+                await this.deleteFile(existingAmenity.svgOrImage);
+              }
             }
-          });
-        }
-
-        // Delete old amenity files if updating
-        if (existingProject && existingProject.amenities) {
-          for (const amenity of existingProject.amenities) {
-            if (amenity.svgOrImage) {
-              await this.deleteFile(amenity.svgOrImage);
-            }
+            
+            const amenityPath = await this.saveFile(files.amenityFiles[fileIndex], uploadDir, `amenity_${Date.now()}_${i}`, projectFolderName);
+            amenity.svgOrImage = amenityPath;
+            console.log(`✅ Saved amenity image: ${amenityPath}`);
+            fileIndex++;
           }
         }
       }
 
-      // Process updated image files
-      if (files.updatedImageFiles && files.updatedImageFiles.length > 0) {
-        const updatedImagePaths = [];
-        for (let i = 0; i < files.updatedImageFiles.length; i++) {
-          const updatedImagePath = await this.saveFile(files.updatedImageFiles[i], uploadDir, `updated_${i + 1}`, projectFolderName);
-          updatedImagePaths.push(updatedImagePath);
-        }
-
-        // Update updated image data with image paths
-        if (processedData.updatedImages && Array.isArray(processedData.updatedImages)) {
-          processedData.updatedImages.forEach((img, index) => {
-            if (updatedImagePaths[index]) {
-              img.image = updatedImagePaths[index];
+      // Process updated images - handle both create and update
+      if (files.updatedImageFiles && files.updatedImageFiles.length > 0 && processedData.updatedImages) {
+        console.log('📅 Processing updated images:', {
+          filesCount: files.updatedImageFiles.length,
+          updatedImagesCount: processedData.updatedImages.length,
+          isUpdate: !!existingProject
+        });
+        
+        let fileIndex = 0;
+        for (let i = 0; i < processedData.updatedImages.length; i++) {
+          const img = processedData.updatedImages[i];
+          // For create: process all images, for update: only process if hasNewFile flag
+          const shouldProcess = existingProject ? img.hasNewFile : true; // Always process in create mode
+          console.log(`Updated image ${i}:`, { alt: img.alt, shouldProcess, fileIndex });
+          
+          if (shouldProcess && fileIndex < files.updatedImageFiles.length) {
+            // Delete old image if updating and exists
+            if (existingProject && img.id) {
+              const existingImg = existingProject.updatedImages?.find(uImg => uImg.id?.toString() === img.id || uImg._id?.toString() === img.id);
+              if (existingImg && existingImg.image) {
+                console.log(`🗑️ Deleting old updated image: ${existingImg.image}`);
+                await this.deleteFile(existingImg.image);
+              }
             }
-          });
-        }
-
-        // Delete old updated images if updating
-        if (existingProject && existingProject.updatedImages) {
-          for (const img of existingProject.updatedImages) {
-            if (img.image) {
-              await this.deleteFile(img.image);
-            }
+            
+            const updatedImagePath = await this.saveFile(files.updatedImageFiles[fileIndex], uploadDir, `updated_${Date.now()}_${i}`, projectFolderName);
+            img.image = updatedImagePath;
+            console.log(`✅ Saved updated image: ${updatedImagePath}`);
+            fileIndex++;
           }
         }
       }
@@ -550,18 +594,31 @@ class ProjectService {
   }
 
   /**
-   * Delete a file
+   * Delete a file with enhanced logging and error handling
    * @param {string} filePath - File path to delete
    */
   async deleteFile(filePath) {
     try {
-      if (filePath) {
-        const fullPath = path.join(process.cwd(), filePath);
-        await fs.access(fullPath);
-        await fs.unlink(fullPath);
+      if (!filePath) {
+        console.log('📝 No file path provided for deletion');
+        return;
       }
+
+      // Remove leading slash if present to ensure correct path construction
+      const cleanPath = filePath.startsWith('/') ? filePath.substring(1) : filePath;
+      const fullPath = path.join(process.cwd(), cleanPath);
+      
+      // Check if file exists before attempting deletion
+      await fs.access(fullPath);
+      await fs.unlink(fullPath);
+      console.log(`🗑️ Successfully deleted file: ${filePath}`);
     } catch (error) {
-      // Ignore file not found errors
+      if (error.code === 'ENOENT') {
+        console.log(`📝 File not found (already deleted or moved): ${filePath}`);
+      } else {
+        console.error(`❌ Error deleting file ${filePath}:`, error.message);
+      }
+      // Don't throw error - continue processing even if file deletion fails
     }
   }
 
@@ -675,7 +732,12 @@ class ProjectService {
    * Clean up all files associated with a project
    * @param {Object} project - Project object
    */
+  /**
+   * Clean up all files associated with a project
+   * @param {Object} project - Project data
+   */
   async cleanupProjectFiles(project) {
+    console.log(`🧹 Starting cleanup for project: ${project.title || project._id}`);
     const filesToDelete = [];
 
     // Collect all file paths
@@ -687,36 +749,143 @@ class ProjectService {
 
     // Floor plan images
     if (project.floorPlans) {
-      project.floorPlans.forEach(plan => {
-        if (plan.image) filesToDelete.push(plan.image);
+      project.floorPlans.forEach((plan, index) => {
+        if (plan.image) {
+          filesToDelete.push(plan.image);
+          console.log(`📋 Found floor plan ${index + 1} image: ${plan.image}`);
+        }
       });
     }
 
     // Project images
     if (project.projectImages) {
-      project.projectImages.forEach(img => {
-        if (img.image) filesToDelete.push(img.image);
+      project.projectImages.forEach((img, index) => {
+        if (img.image) {
+          filesToDelete.push(img.image);
+          console.log(`🖼️ Found project gallery image ${index + 1}: ${img.image}`);
+        }
       });
     }
 
     // Amenity files
     if (project.amenities) {
-      project.amenities.forEach(amenity => {
-        if (amenity.svgOrImage) filesToDelete.push(amenity.svgOrImage);
+      project.amenities.forEach((amenity, index) => {
+        if (amenity.svgOrImage) {
+          filesToDelete.push(amenity.svgOrImage);
+          console.log(`✨ Found amenity ${index + 1} image: ${amenity.svgOrImage}`);
+        }
       });
     }
 
     // Updated images
     if (project.updatedImages) {
-      project.updatedImages.forEach(img => {
-        if (img.image) filesToDelete.push(img.image);
+      project.updatedImages.forEach((img, index) => {
+        if (img.image) {
+          filesToDelete.push(img.image);
+          console.log(`📸 Found updated image ${index + 1}: ${img.image}`);
+        }
       });
     }
+
+    console.log(`📊 Total files to delete: ${filesToDelete.length}`);
 
     // Delete all files
     for (const filePath of filesToDelete) {
       await this.deleteFile(filePath);
     }
+
+    console.log(`✅ Completed cleanup for project: ${project.title || project._id}`);
+  }
+
+  /**
+   * Handle specific deletions based on delete flags
+   * @param {Object} updateData - Update data with delete flags
+   * @param {Object} existingProject - Existing project data
+   * @param {Object} processedData - Processed data to modify
+   */
+  async handleSpecificDeletions(updateData, existingProject, processedData) {
+    console.log('🎯 Processing specific deletions...');
+
+    // Handle individual floor plan deletions
+    if (updateData.deleteFloorPlans && Array.isArray(updateData.deleteFloorPlans)) {
+      console.log(`🗑️ Deleting ${updateData.deleteFloorPlans.length} floor plan(s)`);
+      for (const deletionId of updateData.deleteFloorPlans) {
+        const planToDelete = existingProject.floorPlans?.find(fp => fp.id?.toString() === deletionId || fp._id?.toString() === deletionId);
+        if (planToDelete && planToDelete.image) {
+          console.log(`📋 Deleting floor plan image: ${planToDelete.image}`);
+          await this.deleteFile(planToDelete.image);
+        }
+      }
+    }
+
+    // Handle individual project image deletions
+    if (updateData.deleteProjectImages && Array.isArray(updateData.deleteProjectImages)) {
+      console.log(`🗑️ Deleting ${updateData.deleteProjectImages.length} project gallery image(s)`);
+      for (const deletionId of updateData.deleteProjectImages) {
+        const imageToDelete = existingProject.projectImages?.find(img => img.id?.toString() === deletionId || img._id?.toString() === deletionId);
+        if (imageToDelete && imageToDelete.image) {
+          console.log(`🖼️ Deleting project gallery image: ${imageToDelete.image}`);
+          await this.deleteFile(imageToDelete.image);
+        }
+      }
+    }
+
+    // Handle individual amenity deletions
+    if (updateData.deleteAmenities && Array.isArray(updateData.deleteAmenities)) {
+      console.log(`🗑️ Deleting ${updateData.deleteAmenities.length} amenity/amenities`);
+      for (const deletionId of updateData.deleteAmenities) {
+        const amenityToDelete = existingProject.amenities?.find(am => am.id?.toString() === deletionId || am._id?.toString() === deletionId);
+        if (amenityToDelete && amenityToDelete.svgOrImage) {
+          console.log(`✨ Deleting amenity image: ${amenityToDelete.svgOrImage}`);
+          await this.deleteFile(amenityToDelete.svgOrImage);
+        }
+      }
+    }
+
+    // Handle individual updated image deletions
+    if (updateData.deleteUpdatedImages && Array.isArray(updateData.deleteUpdatedImages)) {
+      console.log(`🗑️ Deleting ${updateData.deleteUpdatedImages.length} updated image(s)`);
+      for (const deletionId of updateData.deleteUpdatedImages) {
+        const imageToDelete = existingProject.updatedImages?.find(img => img.id?.toString() === deletionId || img._id?.toString() === deletionId);
+        if (imageToDelete && imageToDelete.image) {
+          console.log(`📸 Deleting updated image: ${imageToDelete.image}`);
+          await this.deleteFile(imageToDelete.image);
+        }
+      }
+    }
+
+    console.log('✅ Completed specific deletions processing');
+  }
+
+  /**
+   * Merge processed data with existing data to preserve non-updated fields
+   * @param {Object} processedData - Processed update data
+   * @param {Object} existingProject - Existing project data
+   * @returns {Object} Merged data
+   */
+  mergeWithExistingData(processedData, existingProject) {
+    const finalData = { ...processedData };
+
+    // For arrays, we've already handled the merging in handleSpecificDeletions
+    // No need to re-merge here as the processed data already contains the correct arrays
+
+    // Preserve existing aboutUsDetail structure if not being updated
+    if (!processedData.aboutUsDetail && existingProject.aboutUsDetail) {
+      finalData.aboutUsDetail = existingProject.aboutUsDetail;
+    } else if (processedData.aboutUsDetail && existingProject.aboutUsDetail) {
+      // Merge aboutUsDetail, preserving existing image if not being updated
+      finalData.aboutUsDetail = {
+        ...existingProject.aboutUsDetail,
+        ...processedData.aboutUsDetail
+      };
+      
+      // If no new image and no delete flag, preserve existing image
+      if (!processedData.aboutUsDetail.image?.url && !processedData.deleteAboutImage) {
+        finalData.aboutUsDetail.image = existingProject.aboutUsDetail.image || {};
+      }
+    }
+
+    return finalData;
   }
 
   /**

@@ -2,19 +2,35 @@ import axios from 'axios';
 
 /**
  * Get base URL from environment or fallback for image loading
- * Images should always be served via frontend URL (with proxy to backend)
+ * Dynamic detection based on environment and access method
  */
 const getImageBaseUrl = (): string => {
-  // If accessing from network (not localhost), use window.location to get the host
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const protocol = window.location.protocol;
+  // Production environment
+  if (import.meta.env.PROD) {
+    return 'https://mail.shilpgroup.com';
+  }
+  
+  // Development environment - Dynamic detection
+  if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // If accessing via network IP, use network IP for images
+    if (hostname === '192.168.2.143' || hostname.includes('192.168')) {
+      return `${protocol}//${hostname}:8081`;
+    }
+    
+    // If accessing via localhost, use localhost for images
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${protocol}//localhost:8081`;
+    }
+    
+    // Fallback for other scenarios
     return `${protocol}//${hostname}:8081`;
   }
   
-  // In development with localhost, use frontend URL (proxy will handle it)
-  const devPort = import.meta.env.VITE_DEV_PORT || '5174';
-  return `http://localhost:${devPort}`;
+  // Server-side rendering fallback
+  return 'http://localhost:8081';
 };
 
 /**

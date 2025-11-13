@@ -74,13 +74,19 @@ class ProjectTreeService {
         throw new Error('Project tree item not found');
       }
 
+      console.log(`🗂️ Deleting project tree item: ${projectTree.title || id}`);
+
       // Delete the associated image file
       if (projectTree.image) {
+        console.log(`🖼️ Deleting associated image: ${projectTree.image}`);
         this.deleteImageFile(projectTree.image);
       }
 
-      return await projectTreeRepository.delete(id);
+      const result = await projectTreeRepository.delete(id);
+      console.log(`✅ Successfully deleted project tree item: ${projectTree.title || id}`);
+      return result;
     } catch (error) {
+      console.error(`❌ Error deleting project tree item: ${error.message}`);
       throw error;
     }
   }
@@ -88,16 +94,24 @@ class ProjectTreeService {
   // Helper method to delete image file
   deleteImageFile(imagePath) {
     try {
+      if (!imagePath) {
+        console.log('📝 No image path provided for deletion');
+        return;
+      }
+
       // Remove leading slash if present
       const cleanPath = imagePath.startsWith('/') ? imagePath.substring(1) : imagePath;
       const fullPath = path.join(process.cwd(), cleanPath);
       
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);
+        console.log(`🗑️ Successfully deleted image file: ${imagePath}`);
+      } else {
+        console.log(`📝 Image file not found (already deleted): ${imagePath}`);
       }
     } catch (error) {
-      console.error(`❌ Error deleting image file: ${error.message}`);
-      // Don't throw error, just log it
+      console.error(`❌ Error deleting image file ${imagePath}:`, error.message);
+      // Don't throw error, just log it - continue with deletion process
     }
   }
 

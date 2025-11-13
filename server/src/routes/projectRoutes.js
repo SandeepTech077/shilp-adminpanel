@@ -4,6 +4,7 @@ const path = require('path');
 const projectController = require('../controllers/projectController');
 const projectValidation = require('../middleware/projectValidation');
 const adminAuth = require('../middleware/adminAuth');
+const { validateFileSize } = require('../middleware/fileSizeValidation');
 
 const router = express.Router();
 
@@ -34,43 +35,39 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB limit per file
-    files: 20 // Maximum 20 files per request
+    fileSize: 250 * 1024 * 1024, // 250MB limit per file
+    files: 100 // Maximum 100 files per request
   }
 });
 
-// Define multer fields for file uploads
-const uploadFields = upload.fields([
-  { name: 'brochure', maxCount: 1 },
-  { name: 'aboutUsImage', maxCount: 1 },
-  { name: 'floorPlanImages', maxCount: 10 },
-  { name: 'projectImageFiles', maxCount: 5 },
-  { name: 'amenityFiles', maxCount: 20 },
-  { name: 'updatedImageFiles', maxCount: 3 },
-  { name: 'cardImage', maxCount: 1 }
-]);
+// Define multer fields for file uploads - use .any() to accept any field names
+const uploadFields = upload.any(); // Accept any file field names
 
 // Error handling middleware for multer
 const handleMulterError = (err, req, res, next) => {
+  console.log('Multer error occurred:', err.code, err.message);
+  console.log('File details:', req.files ? Object.keys(req.files) : 'No files');
+  
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'File too large. Maximum size is 10MB per file.'
+        message: 'File too large. Maximum size is 250MB per file.'
       });
     }
     if (err.code === 'LIMIT_FILE_COUNT') {
       return res.status(400).json({
         success: false,
-        message: 'Too many files. Check the file limits for each field.'
+        message: 'Too many files. Maximum 100 files allowed per request.'
       });
     }
-    if (err.code === 'LIMIT_UNEXPECTED_FILE') {
-      return res.status(400).json({
-        success: false,
-        message: 'Unexpected file field. Please check the allowed file fields.'
-      });
-    }
+    // Removed LIMIT_UNEXPECTED_FILE error - allow any file field names
+    // if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    //   return res.status(400).json({
+    //     success: false,
+    //     message: 'Unexpected file field. Please check the allowed file fields.'
+    //   });
+    // }
   }
   
   if (err.message.includes('must be')) {
@@ -110,13 +107,14 @@ router.get('/:id',
  * @route   POST /api/projects
  * @desc    Create a new project
  * @access  Private (Admin only)
- * @files   brochure, aboutUsImage, floorPlanImages, projectImageFiles, amenityFiles, updatedImageFiles, cardImage
+ * @files   Accept any file field names for project uploads
  */
 router.post('/', 
   adminAuth.verifyToken,
   adminAuth.requirePermission('projects.create'),
   uploadFields,
   handleMulterError,
+  validateFileSize,
   projectValidation.createProject,
   projectController.createProject
 );
@@ -125,13 +123,14 @@ router.post('/',
  * @route   PUT /api/projects/:id
  * @desc    Update an existing project
  * @access  Private (Admin only)
- * @files   brochure, aboutUsImage, floorPlanImages, projectImageFiles, amenityFiles, updatedImageFiles, cardImage
+ * @files   Accept any file field names for project uploads
  */
 router.put('/:id',
   adminAuth.verifyToken,
   adminAuth.requirePermission('projects.update'),
   uploadFields,
   handleMulterError,
+  validateFileSize,
   projectValidation.updateProject,
   projectController.updateProject
 );

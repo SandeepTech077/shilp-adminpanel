@@ -158,26 +158,51 @@ export const getProjects = async (type?: 'residential' | 'commercial' | 'plot'):
  */
 export const createProject = async (formData: FormData): Promise<CreateProjectResponse> => {
   try {
+    console.log('🔗 Making API request to /api/projects...');
+    console.log('📊 FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: [FILE] ${value.name} (${value.size} bytes, ${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+    
     const response = await projectApiClient.post('/api/projects', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
 
+    console.log('✅ API Response:', response.data);
     return {
       success: true,
       message: response.data.message || 'Project created successfully',
       data: response.data.data,
     };
   } catch (error: unknown) {
-    console.error('Create project error:', error);
+    console.error('❌ Create project error:', error);
     
-    if (axios.isAxiosError(error) && error.response) {
-      return {
-        success: false,
-        message: error.response.data?.message || 'Failed to create project',
-        errors: error.response.data?.errors,
-      };
+    if (axios.isAxiosError(error)) {
+      console.error('📋 Error details:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL,
+        }
+      });
+      
+      if (error.response) {
+        return {
+          success: false,
+          message: error.response.data?.message || 'Failed to create project',
+          errors: error.response.data?.errors,
+        };
+      }
     }
     
     return {

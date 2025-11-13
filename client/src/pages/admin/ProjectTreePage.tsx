@@ -6,6 +6,7 @@ import {
   updateProjectTree,
   deleteProjectTree,
 } from '../../api/projectTree';
+import { getImageUrl } from '../../api'; // Import same as BannerPage
 import ProjectTreeCard from '../../components/admin/projectTree/ProjectTreeCard';
 import SuccessModal from '../../components/admin/projectTree/SuccessModal';
 import DeleteConfirmModal from '../../components/admin/projectTree/DeleteConfirmModal';
@@ -222,9 +223,7 @@ const ProjectTreePage: React.FC = () => {
     
     // Set existing image preview
     if (projectTree.image) {
-      const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
-      const cleanPath = projectTree.image.startsWith('/') ? projectTree.image.slice(1) : projectTree.image;
-      setImagePreview(`${IMAGE_BASE_URL}/${cleanPath}`);
+      setImagePreview(getImageUrl(projectTree.image, false)); // Same signature as banner page
     } else {
       setImagePreview('');
     }

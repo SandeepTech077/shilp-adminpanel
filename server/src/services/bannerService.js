@@ -125,8 +125,11 @@ const updateBlogsDetailText = async (title, description) => {
 // Enhanced delete function with better error handling
 const deleteBannerImage = async (section, field, oldImageUrl) => {
   try {
+    console.log(`🎏 Deleting banner image - Section: ${section}, Field: ${field}`);
+    
     // Delete the physical file first
     if (oldImageUrl) {
+      console.log(`🗑️ Deleting banner image file: ${oldImageUrl}`);
       await deleteImageFile(oldImageUrl);
     }
     
@@ -136,16 +139,20 @@ const deleteBannerImage = async (section, field, oldImageUrl) => {
     // Clear cache after data change
     clearBannersCache();
     
+    console.log(`✅ Successfully deleted banner image - Section: ${section}, Field: ${field}`);
     return result;
   } catch (error) {
-    console.error('Error in deleteBannerImage:', error);
+    console.error(`❌ Error in deleteBannerImage (${section}/${field}):`, error);
     throw error;
   }
 };
 
 // Helper function to delete image files with enhanced path handling
 const deleteImageFile = async (imageUrl) => {
-  if (!imageUrl) return;
+  if (!imageUrl) {
+    console.log('📝 No banner image URL provided for deletion');
+    return;
+  }
   
   try {
     // Handle both relative and absolute URLs
@@ -166,11 +173,12 @@ const deleteImageFile = async (imageUrl) => {
     // Check if file exists and delete it
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
+      console.log(`🗑️ Successfully deleted banner image: ${imageUrl}`);
     } else {
-      // File not found, skip
+      console.log(`📝 Banner image file not found (already deleted): ${imageUrl}`);
     }
   } catch (error) {
-    console.error('Error deleting image file:', error);
+    console.error(`❌ Error deleting banner image ${imageUrl}:`, error.message);
     // Don't throw error - file deletion failure shouldn't stop the operation
   }
 };

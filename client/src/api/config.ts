@@ -2,18 +2,51 @@
 import axios from 'axios';
 import type { AxiosRequestConfig } from 'axios';
 
-// Get base URL from environment variables
+// Dynamic URL detection based on environment and access method
 const getBaseUrl = (): string => {
-
-  // If accessing from network (not localhost), use network IP from env
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const networkIP = import.meta.env.VITE_NETWORK_IP || window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${networkIP}:8081`;
+  // Production environment
+  if (import.meta.env.PROD) {
+    return 'https://mail.shilpgroup.com';
   }
   
-  // In development with localhost, use configured API base URL
-  return import.meta.env.VITE_API_BASE_URL?.split(',')[0] || '';
+  // Development environment - Dynamic detection
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const protocol = window.location.protocol;
+    
+    // If accessing via network IP, use network IP for API
+    if (hostname === '192.168.2.143' || hostname.includes('192.168')) {
+      return `${protocol}//${hostname}:8081`;
+    }
+    
+    // If accessing via localhost, use localhost for API
+    if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      return `${protocol}//localhost:8081`;
+    }
+    
+    // Fallback for other scenarios
+    return `${protocol}//${hostname}:8081`;
+  }
+  
+  // Server-side rendering fallback
+  return 'http://localhost:8081';
+};
+
+// Dynamic image URL generator
+export const getImageUrl = (imagePath: string): string => {
+  if (!imagePath) return '';
+  
+  // Remove leading slash if present
+  const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+  
+  // Production environment
+  if (import.meta.env.PROD) {
+    return `https://mail.shilpgroup.com${cleanPath}`;
+  }
+  
+  // Development environment - match API base URL
+  const baseUrl = getBaseUrl();
+  return `${baseUrl}${cleanPath}`;
 };
 
 export const API_CONFIG = {

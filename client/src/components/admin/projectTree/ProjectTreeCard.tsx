@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ProjectTree } from '../../../api/projectTree';
+import { getImageUrl } from '../../../api'; // Use same import as BannerPage
 
 interface ProjectTreeCardProps {
   projectTree: ProjectTree;
@@ -8,19 +9,24 @@ interface ProjectTreeCardProps {
 }
 
 const ProjectTreeCard: React.FC<ProjectTreeCardProps> = ({ projectTree, onEdit, onDelete }) => {
-  const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081';
-  
-  const getImageUrl = (imagePath: string) => {
+  const getImageUrlLocal = (imagePath: string): string => {
     if (!imagePath) {
       return '/placeholder-image.png';
     }
-    if (imagePath.startsWith('http')) {
-      return imagePath;
+    // Use the same function as BannerPage - from imageUtils with cacheBust=false for display
+    const fullImageUrl = getImageUrl(imagePath, false); // Same as banner page
+    
+    // Debug log for network IP testing
+    if (typeof window !== 'undefined' && window.location.hostname === '192.168.2.143') {
+      console.log('🖼️ Project Tree Image Debug:', {
+        originalPath: imagePath,
+        generatedUrl: fullImageUrl,
+        hostname: window.location.hostname,
+        protocol: window.location.protocol
+      });
     }
-    // Clean the path - remove leading slash if present
-    const cleanPath = imagePath.startsWith('/') ? imagePath.slice(1) : imagePath;
-    const fullUrl = `${IMAGE_BASE_URL}/${cleanPath}`;
-    return fullUrl;
+    
+    return fullImageUrl;
   };
 
   const getTypeColor = (type: string) => {
@@ -68,33 +74,40 @@ const ProjectTreeCard: React.FC<ProjectTreeCardProps> = ({ projectTree, onEdit, 
 
   return (
     <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden hover:shadow-xl transition-all duration-300">
-      {/* Image Section - Top */}
-      <div className="relative h-40 bg-linear-to-br from-blue-100 to-indigo-100">
-        <img
-          src={getImageUrl(projectTree.image)}
-          alt={projectTree.title}
-          crossOrigin="anonymous"
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            console.error('❌ Image failed to load:', getImageUrl(projectTree.image));
-            target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e0e7ff" width="400" height="300"/%3E%3Ctext fill="%234f46e5" font-family="Arial" font-size="18" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
-          }}
-        />
-        {/* Year Badge - Overlay */}
-        <div className="absolute top-3 left-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600/90 backdrop-blur-sm rounded-lg shadow-lg">
-            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-lg font-bold text-white">{projectTree.year}</span>
+      {/* Image Section - Circular Design */}
+      <div className="relative bg-linear-to-br from-blue-50 to-indigo-50 p-6">
+        <div className="flex justify-center mb-4">
+          <div className="relative">
+            {/* Circular Image Container */}
+            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-lg bg-white">
+              <img
+                src={getImageUrlLocal(projectTree.image)}
+                alt={projectTree.title}
+                crossOrigin="anonymous"
+                className="w-full h-full object-cover object-center"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  console.error('❌ Image failed to load:', getImageUrlLocal(projectTree.image));
+                  target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="128" height="128"%3E%3Ccircle fill="%23e0e7ff" cx="64" cy="64" r="64"/%3E%3Ctext fill="%234f46e5" font-family="Arial" font-size="12" x="50%25" y="50%25" text-anchor="middle" dominant-baseline="middle"%3ENo Image%3C/text%3E%3C/svg%3E';
+                }}
+              />
+            </div>
+            {/* Year Badge - Floating */}
+            <div className="absolute -top-2 -left-2">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 rounded-full shadow-lg">
+                <svg className="w-3 h-3 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-bold text-white">{projectTree.year}</span>
+              </div>
+            </div>
+            {/* Number Badge - Floating */}
+            <div className="absolute -top-2 -right-2">
+              <span className="inline-block px-2 py-1 bg-white text-gray-700 text-xs font-bold rounded-full shadow-lg border border-gray-200">
+                #{projectTree.no}
+              </span>
+            </div>
           </div>
-        </div>
-        {/* Number Badge - Overlay */}
-        <div className="absolute top-3 right-3">
-          <span className="px-2.5 py-1 bg-white/90 backdrop-blur-sm text-gray-700 text-xs font-bold rounded-md shadow-md">
-            #{projectTree.no}
-          </span>
         </div>
       </div>
 

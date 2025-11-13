@@ -81,6 +81,8 @@ const deleteBlog = async (blogId) => {
     throw new Error("Blog not found");
   }
 
+  console.log(`📝 Deleting blog: ${blog.title || blogId}`);
+
   // First delete from database
   await blogRepository.deleteBlog(blogId);
 
@@ -92,13 +94,16 @@ const deleteBlog = async (blogId) => {
   );
 
   try {
+    console.log(`🗂️ Deleting blog folder: ${blogFolder}`);
     await fs.rm(blogFolder, { recursive: true, force: true });
+    console.log(`✅ Successfully deleted blog folder: ${blog.url}`);
   } catch (error) {
-    console.error(`⚠️ Error deleting blog folder: ${error.message}`);
+    console.error(`❌ Error deleting blog folder: ${error.message}`);
     // Don't throw error if folder deletion fails
     // Blog is already deleted from database
   }
 
+  console.log(`✅ Successfully deleted blog: ${blog.title || blogId}`);
   return { message: "Blog and all images deleted successfully" };
 };
 

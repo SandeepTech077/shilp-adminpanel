@@ -1,15 +1,19 @@
 import type { RouteObject } from 'react-router';
-import BannerPage from '../pages/admin/BannerPage';
-import ProjectsPage from '../pages/admin/ProjectsPage';
-import PlotsPage from '../pages/admin/PlotsPage';
-import CommercialPage from '../pages/admin/CommercialPage';
-import ResidentialPage from '../pages/admin/ResidentialPage';
-import EditProjectPage from '../pages/admin/EditProjectPage';
-import ViewProjectPage from '../pages/admin/ViewProjectPage';
-import ProjectTreePage from '../pages/admin/ProjectTreePage';
-import BlogsPage from '../pages/admin/BlogsPage';
+import { lazy, Suspense } from 'react';
 import RouteGuard from '../components/RouteGuard';
 import Layout from '../components/Layout';
+import { PageLoading } from '../components/LoadingComponents';
+
+// Lazy load all admin pages for better code splitting
+const BannerPage = lazy(() => import('../pages/admin/BannerPage'));
+const NewProjectsPage = lazy(() => import('../pages/admin/NewProjectsPage'));
+const PlotsPage = lazy(() => import('../pages/admin/PlotsPage'));
+const CommercialPage = lazy(() => import('../pages/admin/CommercialPage'));
+const ResidentialPage = lazy(() => import('../pages/admin/ResidentialPage'));
+const EditProjectPage = lazy(() => import('../pages/admin/EditProjectPage'));
+const ViewProjectPage = lazy(() => import('../pages/admin/ViewProjectPage'));
+const ProjectTreePage = lazy(() => import('../pages/admin/ProjectTreePage'));
+const BlogsPage = lazy(() => import('../pages/admin/BlogsPage'));
 
 export const adminRoutes: RouteObject[] = [
   {
@@ -17,7 +21,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Banner Management">
-          <BannerPage />
+          <Suspense fallback={<PageLoading />}>
+            <BannerPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -26,8 +32,10 @@ export const adminRoutes: RouteObject[] = [
     path: "/admin/projects",
     element: (
       <RouteGuard requireAuth={true}>
-        <Layout title="Projects">
-          <ProjectsPage />
+        <Layout title="Create Project">
+          <Suspense fallback={<PageLoading />}>
+            <NewProjectsPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -37,7 +45,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="View Project">
-          <ViewProjectPage />
+          <Suspense fallback={<PageLoading />}>
+            <ViewProjectPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -47,7 +57,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Edit Project">
-          <EditProjectPage />
+          <Suspense fallback={<PageLoading />}>
+            <EditProjectPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -57,7 +69,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Plots">
-          <PlotsPage />
+          <Suspense fallback={<PageLoading />}>
+            <PlotsPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -67,7 +81,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Commercial Projects">
-          <CommercialPage />
+          <Suspense fallback={<PageLoading />}>
+            <CommercialPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -77,7 +93,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Residential Projects">
-          <ResidentialPage />
+          <Suspense fallback={<PageLoading />}>
+            <ResidentialPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -87,7 +105,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Project Tree">
-          <ProjectTreePage />
+          <Suspense fallback={<PageLoading />}>
+            <ProjectTreePage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),
@@ -97,7 +117,9 @@ export const adminRoutes: RouteObject[] = [
     element: (
       <RouteGuard requireAuth={true}>
         <Layout title="Blogs">
-          <BlogsPage />
+          <Suspense fallback={<PageLoading />}>
+            <BlogsPage />
+          </Suspense>
         </Layout>
       </RouteGuard>
     ),

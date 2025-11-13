@@ -80,27 +80,12 @@ const getProjectBySlug = async (req, res) => {
 
 const getAllBlogs = async (req, res) => {
   try {
-    const { category, search, page = 1, limit = 100 } = req.query;
-    
-    const filters = {};
-    if (category) filters.category = category;
-    if (search) filters.search = search;
-
-    const blogs = await blogService.getAllBlogs(
-      filters,
-      parseInt(page),
-      parseInt(limit)
-    );
+    // For public API, we only want published blogs
+    const blogs = await blogService.getAllBlogs('published');
     
     res.status(200).json({
       success: true,
-      data: blogs.blogs,
-      pagination: {
-        currentPage: blogs.currentPage,
-        totalPages: blogs.totalPages,
-        totalBlogs: blogs.totalBlogs,
-        hasMore: blogs.hasMore
-      }
+      data: blogs
     });
   } catch (error) {
     res.status(500).json({
@@ -114,7 +99,8 @@ const getAllBlogs = async (req, res) => {
 const getBlogBySlug = async (req, res) => {
   try {
     const { slug } = req.params;
-    const blog = await blogService.getBlogBySlug(slug);
+    // Use getBlogByUrl since the service function is getBlogByUrl, not getBlogBySlug
+    const blog = await blogService.getBlogByUrl(slug);
     
     if (!blog) {
       return res.status(404).json({

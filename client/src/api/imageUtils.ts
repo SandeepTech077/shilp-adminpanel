@@ -1,20 +1,5 @@
 import axios from 'axios';
-
-/**
- * Get base URL from environment or fallback for image loading
- * Images should always be served via frontend URL (with proxy to backend)
- */
-const getImageBaseUrl = (): string => {
-  // If accessing from network (not localhost), use network IP from env
-  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    const networkIP = import.meta.env.VITE_NETWORK_IP || window.location.hostname;
-    const protocol = window.location.protocol;
-    return `${protocol}//${networkIP}:8081`;
-  }
-  
-  // In development with localhost, use configured image base URL
-  return import.meta.env.VITE_IMAGE_BASE_URL?.split(',')[0] || 'http://localhost:8081';
-};
+import { getImageUrl as getImageUrlFromConfig } from './config';
 
 /**
  * Constructs a full image URL from a relative path or filename with cache busting
@@ -27,37 +12,14 @@ export const getImageUrl = (imagePath: string | undefined | null, cacheBust: boo
     return '';
   }
 
-  const imageBaseUrl = getImageBaseUrl(); // Use separate image base URL
-  let fullUrl = '';
-
-  // If it's already a full URL (starts with http), return as is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    fullUrl = imagePath;
-  }
-  // If it starts with /uploads, it's a proper server path
-  else if (imagePath.startsWith('/uploads/')) {
-    fullUrl = `${imageBaseUrl}${imagePath}`;
-  }
-  // If it starts with uploads/ (without leading slash), add the slash
-  else if (imagePath.startsWith('uploads/')) {
-    fullUrl = `${imageBaseUrl}/${imagePath}`;
-  }
-  // If it's just a filename, assume it's in the banners folder
-  else if (!imagePath.includes('/')) {
-    fullUrl = `${imageBaseUrl}/uploads/banners/${imagePath}`;
-  }
-  // Otherwise, treat it as a relative path from the server root
-  else {
-    fullUrl = `${imageBaseUrl}/${imagePath.startsWith('/') ? imagePath.substring(1) : imagePath}`;
-  }
+  // Use the centralized image URL function from config
+  let fullUrl = getImageUrlFromConfig(imagePath);
 
   // Add cache busting parameter for fresh images
   if (cacheBust && fullUrl) {
     const separator = fullUrl.includes('?') ? '&' : '?';
     fullUrl += `${separator}t=${Date.now()}`;
   }
-
-  // Debug logging removed
 
   return fullUrl;
 };

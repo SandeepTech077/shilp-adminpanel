@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import { getProjects, deleteProject, toggleProjectStatus, type Project } from '../../api/project/projectApi';
 import { getImageUrl } from '../../api/imageUtils';
 import { Toast } from '../../components/modals';

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router';
 import { getProjectById } from '../../api';
 import { getImageUrl } from '../../api/imageUtils';
 import { MapPin, Calendar, FileText, Image as ImageIcon, ArrowLeft } from 'lucide-react';

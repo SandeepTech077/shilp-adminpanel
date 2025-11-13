@@ -2,23 +2,18 @@ const { body, param, query } = require('express-validator');
 const projectRepository = require('../repositories/projectRepository');
 
 const projectValidation = {
-  // Validation for creating a new project
+  // Simplified validation matching client-side validation
   createProject: [
+    // Basic required fields
     body('projectTitle')
       .trim()
       .notEmpty()
-      .withMessage('Project title is required')
-      .isLength({ min: 3, max: 200 })
-      .withMessage('Project title must be between 3 and 200 characters'),
+      .withMessage('Project title is required'),
 
     body('slug')
       .trim()
       .notEmpty()
       .withMessage('Slug is required')
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Slug must be between 3 and 100 characters')
-      .matches(/^[a-z0-9-]+$/)
-      .withMessage('Slug must contain only lowercase letters, numbers, and hyphens')
       .custom(async (value) => {
         if (!value || value.trim() === '') {
           throw new Error('Slug cannot be empty');
@@ -31,420 +26,413 @@ const projectValidation = {
       }),
 
     body('shortAddress')
-      .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isLength({ min: 2, max: 300 })
-      .withMessage('Short address must be between 2 and 300 characters'),
-
-    body('locationTitle')
       .trim()
       .notEmpty()
-      .withMessage('Location title is required')
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Location title must be between 3 and 100 characters'),
-
-    body('locationTitleText')
-      .trim()
-      .notEmpty()
-      .withMessage('Location description is required')
-      .isLength({ min: 5, max: 1000 })
-      .withMessage('Location description must be between 5 and 1000 characters'),
-
-    body('locationArea')
-      .trim()
-      .notEmpty()
-      .withMessage('Location area is required')
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Location area must be between 3 and 100 characters'),
-
-    body('number1')
-      .trim()
-      .notEmpty()
-      .withMessage('Primary mobile number is required')
-      .matches(/^(\+91)?[6-9]\d{9}$/)
-      .withMessage('Primary mobile number must be a valid Indian mobile number'),
-
-    body('number2')
-      .trim()
-      .notEmpty()
-      .withMessage('Secondary mobile number is required')
-      .matches(/^(\+91)?[6-9]\d{9}$/)
-      .withMessage('Secondary mobile number must be a valid Indian mobile number'),
-
-    body('email1')
-      .trim()
-      .notEmpty()
-      .withMessage('Primary email is required')
-      .isEmail()
-      .withMessage('Primary email must be a valid email address')
-      .normalizeEmail(),
-
-    body('email2')
-      .trim()
-      .notEmpty()
-      .withMessage('Secondary email is required')
-      .isEmail()
-      .withMessage('Secondary email must be a valid email address')
-      .normalizeEmail(),
-
-    body('cardLocation')
-      .trim()
-      .notEmpty()
-      .withMessage('Card location is required')
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Card location must be between 3 and 100 characters'),
-
-    body('cardAreaFt')
-      .trim()
-      .notEmpty()
-      .withMessage('Card area is required')
-      .isLength({ min: 1, max: 20 })
-      .withMessage('Card area must be between 1 and 20 characters'),
-
-    body('reraNumber')
-      .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isLength({ min: 5, max: 200 })
-      .withMessage('RERA number must be between 5 and 200 characters'),
-
-    body('projectState')
-      .isIn(['on-going', 'completed'])
-      .withMessage('Project state must be either "on-going" or "completed"'),
+      .withMessage('Short address is required'),
 
     body('projectType')
       .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Project type must be either "residential", "commercial", or "plot"'),
+      .withMessage('Project type must be residential, commercial, or plot'),
 
-    body('shortAddress')
-      .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isLength({ min: 2, max: 300 })
-      .withMessage('Short address must be between 2 and 300 characters'),
+    body('projectState')
+      .isIn(['on-going', 'completed'])
+      .withMessage('Project state must be on-going or completed'),
 
     body('projectStatusPercentage')
-      .isInt({ min: 0, max: 100 })
-      .withMessage('Project status percentage must be between 0 and 100'),
+      .optional()
+      .isNumeric()
+      .withMessage('Project status percentage must be a number'),
 
-    // About Us Descriptions validation (4 individual fields)
+    // About Us Description 1 is required, others are optional
     body('description1')
       .trim()
       .notEmpty()
-      .withMessage('At least one description is required')
-      .isLength({ max: 2000 })
-      .withMessage('Description 1 cannot exceed 2000 characters'),
+      .withMessage('Description 1 is required'),
 
     body('description2')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 2 cannot exceed 2000 characters'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('description3')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 3 cannot exceed 2000 characters'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('description4')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 4 cannot exceed 2000 characters'),
-
-    body('aboutUsAlt')
-      .optional()
-      .trim()
-      .isLength({ max: 200 })
-      .withMessage('About us alt text cannot exceed 200 characters'),
-
-    body('youtubeUrl')
       .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isURL()
-      .withMessage('YouTube URL must be a valid URL'),
+      .trim(),
 
-    body('updatedImagesTitle')
-      .optional()
-      .trim()
-      .isLength({ max: 200 })
-      .withMessage('Updated images title cannot exceed 200 characters'),
+    // About Us Image Alt Text (optional)
+    body('aboutUsAlt')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
+    // Location fields (required)
     body('locationTitle')
-      .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Location title cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Location title is required'),
 
     body('locationTitleText')
-      .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Location title text cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Location title text is required'),
 
     body('locationArea')
-      .optional()
-      .trim()
-      .isLength({ max: 100 })
-      .withMessage('Location area cannot exceed 100 characters'),
-
-    body('number1')
-      .optional()
-      .trim()
-      .isMobilePhone()
-      .withMessage('Phone number 1 must be a valid phone number'),
-
-    body('number2')
-      .optional()
-      .trim()
-      .isMobilePhone()
-      .withMessage('Phone number 2 must be a valid phone number'),
-
-    body('email1')
-      .optional()
-      .trim()
-      .normalizeEmail()
-      .isEmail()
-      .withMessage('Email 1 must be a valid email address'),
-
-    body('email2')
-      .optional()
-      .trim()
-      .normalizeEmail()
-      .isEmail()
-      .withMessage('Email 2 must be a valid email address'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('mapIframeUrl')
-      .optional()
       .trim()
-      .isURL()
-      .withMessage('Map iframe URL must be a valid URL'),
+      .notEmpty()
+      .withMessage('Map iframe URL is required'),
 
+    // Contact details (using defaults from client)
+    body('number1')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('number2')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('email1')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('email2')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    // Card details (required)
     body('cardLocation')
-      .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Card location cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Card location is required'),
 
     body('cardAreaFt')
-      .optional()
       .trim()
-      .isLength({ max: 50 })
-      .withMessage('Card area cannot exceed 50 characters'),
+      .notEmpty()
+      .withMessage('Card area (sq ft) is required'),
 
     body('cardProjectType')
-      .notEmpty()
-      .withMessage('Card project type is required')
+      .optional()
       .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Card project type must be one of: residential, commercial, plot'),
+      .withMessage('Card project type must be residential, commercial, or plot'),
 
     body('cardHouse')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    // Updated images title (required)
+    body('updatedImagesTitle')
+      .trim()
       .notEmpty()
-      .withMessage('Card house status is required')
-      .isIn(['Ready to Move', 'Sample House Ready'])
-      .withMessage('Card house status must be either "Ready to Move" or "Sample House Ready"'),
+      .withMessage('Updated images title is required'),
+
+    // All other fields are optional
+    body('youtubeUrl')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('reraNumber')
-  .optional()
-  .trim()
-,
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    // JSON fields validation
+    body('aboutUsDetail')
+      .optional()
+      .custom((value) => {
+        if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('About Us detail must be valid JSON');
+          }
+        }
+        return true;
+      }),
+
+    body('floorPlans')
+      .optional()
+      .custom((value) => {
+        if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('Floor plans must be valid JSON');
+          }
+        }
+        return true;
+      }),
+
+    body('projectImages')
+      .optional()
+      .custom((value) => {
+        if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('Project images must be valid JSON');
+          }
+        }
+        return true;
+      }),
+
+    body('amenities')
+      .optional()
+      .custom((value) => {
+        if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('Amenities must be valid JSON');
+          }
+        }
+        return true;
+      }),
+
+    body('updatedImages')
+      .optional()
+      .custom((value) => {
+        if (typeof value === 'string') {
+          try {
+            JSON.parse(value);
+            return true;
+          } catch (e) {
+            throw new Error('Updated images must be valid JSON');
+          }
+        }
+        return true;
+      }),
   ],
 
-  // Validation for updating a project (same as create but all fields optional)
+  // Validation for updating a project
   updateProject: [
+    param('id')
+      .isMongoId()
+      .withMessage('Invalid project ID'),
+
     body('projectTitle')
       .optional()
       .trim()
       .notEmpty()
-      .withMessage('Project title cannot be empty')
-      .isLength({ min: 3, max: 200 })
-      .withMessage('Project title must be between 3 and 200 characters'),
+      .withMessage('Project title is required'),
 
     body('slug')
       .optional()
       .trim()
       .notEmpty()
-      .withMessage('Slug cannot be empty')
-      .isLength({ min: 3, max: 100 })
-      .withMessage('Slug must be between 3 and 100 characters')
-      .matches(/^[a-z0-9-]+$/)
-      .withMessage('Slug must contain only lowercase letters, numbers, and hyphens'),
-
-    body('projectState')
-      .optional()
-      .isIn(['on-going', 'completed'])
-      .withMessage('Project state must be either "on-going" or "completed"'),
-
-    body('projectType')
-      .optional()
-      .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Project type must be either "residential", "commercial", or "plot"'),
+      .withMessage('Slug is required'),
 
     body('shortAddress')
       .optional()
       .trim()
       .notEmpty()
-      .withMessage('Short address cannot be empty')
-      .isLength({ max: 300 })
-      .withMessage('Short address cannot exceed 300 characters'),
+      .withMessage('Short address is required'),
+
+    body('projectType')
+      .optional()
+      .isIn(['residential', 'commercial', 'plot'])
+      .withMessage('Project type must be residential, commercial, or plot'),
+
+    body('projectState')
+      .optional()
+      .isIn(['on-going', 'completed'])
+      .withMessage('Project state must be on-going or completed'),
 
     body('projectStatusPercentage')
       .optional()
-      .isInt({ min: 0, max: 100 })
-      .withMessage('Project status percentage must be between 0 and 100'),
+      .isNumeric()
+      .withMessage('Project status percentage must be a number'),
 
-    // About Us Descriptions validation (4 individual fields)
+    // About Us Description 1 is required if provided, others are optional
     body('description1')
       .optional()
       .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 1 cannot exceed 2000 characters'),
+      .notEmpty()
+      .withMessage('Description 1 is required when provided'),
 
     body('description2')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 2 cannot exceed 2000 characters'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('description3')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 3 cannot exceed 2000 characters'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('description4')
-      .optional({ checkFalsy: false })
-      .trim()
-      .isLength({ max: 2000 })
-      .withMessage('Description 4 cannot exceed 2000 characters'),
-
-    body('aboutUsAlt')
-      .optional()
-      .trim()
-      .isLength({ max: 200 })
-      .withMessage('About us alt text cannot exceed 200 characters'),
-
-    body('youtubeUrl')
       .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isURL()
-      .withMessage('YouTube URL must be a valid URL'),
+      .trim(),
 
-    body('updatedImagesTitle')
-      .optional()
-      .trim()
-      .isLength({ max: 200 })
-      .withMessage('Updated images title cannot exceed 200 characters'),
+    // About Us Image Alt Text (optional)
+    body('aboutUsAlt')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
+    // Location fields (required if provided)
     body('locationTitle')
       .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Location title cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Location title is required when provided'),
 
     body('locationTitleText')
       .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Location title text cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Location title text is required when provided'),
 
     body('locationArea')
-      .optional()
-      .trim()
-      .isLength({ max: 100 })
-      .withMessage('Location area cannot exceed 100 characters'),
-
-    body('number1')
-      .optional()
-      .trim()
-      .isMobilePhone()
-      .withMessage('Phone number 1 must be a valid phone number'),
-
-    body('number2')
-      .optional()
-      .trim()
-      .isMobilePhone()
-      .withMessage('Phone number 2 must be a valid phone number'),
-
-    body('email1')
-      .optional()
-      .trim()
-      .normalizeEmail()
-      .isEmail()
-      .withMessage('Email 1 must be a valid email address'),
-
-    body('email2')
-      .optional()
-      .trim()
-      .normalizeEmail()
-      .isEmail()
-      .withMessage('Email 2 must be a valid email address'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('mapIframeUrl')
-      .optional({ nullable: true, checkFalsy: true })
-      .trim()
-      .isURL()
-      .withMessage('Map iframe URL must be a valid URL'),
-
-    body('cardLocation')
       .optional()
       .trim()
-      .isLength({ max: 200 })
-      .withMessage('Card location cannot exceed 200 characters'),
+      .notEmpty()
+      .withMessage('Map iframe URL is required when provided'),
+
+    // Contact details (optional)
+    body('number1')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('number2')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('email1')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('email2')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('cardAreaFt')
-      .optional()
-      .trim()
-      .isLength({ max: 50 })
-      .withMessage('Card area cannot exceed 50 characters'),
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('cardLocation')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('cardProjectType')
       .optional()
       .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Card project type must be one of: residential, commercial, plot'),
+      .withMessage('Card project type must be residential, commercial, or plot'),
 
     body('cardHouse')
       .optional()
       .isIn(['Ready to Move', 'Sample House Ready'])
-      .withMessage('Card house status must be either "Ready to Move" or "Sample House Ready"'),
+      .withMessage('Card house status must be Ready to Move or Sample House Ready'),
+
+    body('youtubeUrl')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('updatedImagesTitle')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('reraNumber')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('isActive')
+      .optional()
+      .isBoolean()
+      .withMessage('isActive must be a boolean'),
+
+    body('description2')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('description3')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    body('description4')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
+
+    // About Us Image Alt Text (optional)
+    body('aboutUsAlt')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim()
+      .isLength({ min: 1, max: 200 })
+      .withMessage('About Us image alt text must be between 1 and 200 characters'),
+
+    // Optional fields
+    body('mapLocation')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim()
+      .isLength({ min: 5, max: 500 })
+      .withMessage('Map location must be between 5 and 500 characters'),
+
+    body('highlights')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim()
+      .isLength({ min: 10, max: 1000 })
+      .withMessage('Highlights must be between 10 and 1000 characters'),
+
+    body('priority')
+      .optional({ nullable: true })
+      .isInt({ min: 1, max: 100 })
+      .withMessage('Priority must be a number between 1 and 100'),
+
+    body('lat')
+      .optional({ nullable: true })
+      .isFloat({ min: -90, max: 90 })
+      .withMessage('Latitude must be a valid coordinate between -90 and 90'),
+
+    body('lng')
+      .optional({ nullable: true })
+      .isFloat({ min: -180, max: 180 })
+      .withMessage('Longitude must be a valid coordinate between -180 and 180'),
+
+    // YouTube URL and RERA Number - optional fields
+    body('youtubeUrl')
+      .optional({ nullable: true, checkFalsy: true })
+      .trim(),
 
     body('reraNumber')
       .optional({ nullable: true, checkFalsy: true })
       .trim(),
   ],
 
-  // Validation for project ID parameter
-  projectId: [
+  // Validation for getting project by ID
+  getProject: [
     param('id')
       .isMongoId()
-      .withMessage('Invalid project ID format')
+      .withMessage('Invalid project ID')
   ],
 
-  // Validation for project slug parameter
-  projectSlug: [
+  // Validation for getting project by slug
+  getProjectBySlug: [
     param('slug')
       .trim()
       .notEmpty()
       .withMessage('Slug is required')
+      .isLength({ min: 3, max: 100 })
+      .withMessage('Slug must be between 3 and 100 characters')
       .matches(/^[a-z0-9-]+$/)
-      .withMessage('Invalid slug format')
+      .withMessage('Slug must contain only lowercase letters, numbers, and hyphens')
   ],
 
-  // Validation for project state parameter
-  projectState: [
-    param('state')
-      .isIn(['on-going', 'completed'])
-      .withMessage('State must be either "on-going" or "completed"')
+  // Validation for deleting a project
+  deleteProject: [
+    param('id')
+      .isMongoId()
+      .withMessage('Invalid project ID')
   ],
 
-  // Validation for project type parameter
-  projectType: [
-    param('type')
-      .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Type must be one of: residential, commercial, plot')
-  ],
-
-  // Validation for query parameters
-  queryParams: [
+  // Validation for getting all projects with filtering
+  getAllProjects: [
     query('page')
       .optional()
       .isInt({ min: 1 })
@@ -455,37 +443,31 @@ const projectValidation = {
       .isInt({ min: 1, max: 100 })
       .withMessage('Limit must be between 1 and 100'),
 
-    query('sort')
+    query('projectType')
       .optional()
-      .isIn(['createdAt', 'updatedAt', 'projectTitle', 'projectStatusPercentage'])
-      .withMessage('Sort field must be one of: createdAt, updatedAt, projectTitle, projectStatusPercentage'),
+      .isIn(['Residential', 'Commercial'])
+      .withMessage('Project type must be Residential or Commercial'),
 
-    query('order')
+    query('houseStatus')
       .optional()
-      .isIn(['asc', 'desc'])
-      .withMessage('Order must be either "asc" or "desc"'),
-
-    query('state')
-      .optional()
-      .isIn(['on-going', 'completed'])
-      .withMessage('State filter must be either "on-going" or "completed"'),
-
-    query('type')
-      .optional()
-      .isIn(['residential', 'commercial', 'plot'])
-      .withMessage('Type filter must be one of: residential, commercial, plot'),
+      .isIn(['Under Construction', 'Completed', 'Upcoming'])
+      .withMessage('House status must be Under Construction, Completed, or Upcoming'),
 
     query('search')
       .optional()
       .trim()
-      .isLength({ min: 2 })
-      .withMessage('Search term must be at least 2 characters long'),
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Search term must be between 1 and 100 characters'),
 
-    query('q')
+    query('sort')
       .optional()
-      .trim()
-      .isLength({ min: 2 })
-      .withMessage('Search query must be at least 2 characters long')
+      .isIn(['createdAt', 'projectTitle', 'priority', 'houseStatus'])
+      .withMessage('Sort field must be one of: createdAt, projectTitle, priority, houseStatus'),
+
+    query('order')
+      .optional()
+      .isIn(['asc', 'desc'])
+      .withMessage('Sort order must be asc or desc'),
   ]
 };
 

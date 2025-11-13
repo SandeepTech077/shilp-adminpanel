@@ -4,59 +4,64 @@ const Admin = require('../models/Admin');
 
 class AdminService {
 
-  async login(email, password, ipAddress, userAgent) {
-    // Find admin by email
-    const admin = await adminRepository.findByEmail(email);
-    
-    if (!admin) {
-      throw new Error('Invalid credentials');
-    }
+async login(email, password, ipAddress, userAgent) {
+  // Find admin by email
+  const admin = await adminRepository.findByEmail(email);
 
-    // Check if account is locked
-    if (admin.isLocked) {
-      throw new Error('Account is temporarily locked due to multiple failed login attempts');
-    }
-
-    // Check if account is active
-    if (!admin.isActive) {
-      throw new Error('Account is deactivated');
-    }
-
-    // Verify password
-    const isPasswordValid = await admin.comparePassword(password);
-    
-    if (!isPasswordValid) {
-      // Increment login attempts
-      await adminRepository.incrementLoginAttempts(admin._id);
-      throw new Error('Invalid credentials');
-    }
-
-    // Reset login attempts on successful login
-    await adminRepository.resetLoginAttempts(admin._id);
-    
-    // Update last login information
-    await adminRepository.updateLastLogin(admin._id, ipAddress, userAgent);
-
-    // Generate JWT token
-    const token = this.generateToken(admin);
-
-    // Return admin data without sensitive information
-    const adminData = {
-      id: admin._id,
-      username: admin.username,
-      email: admin.email,
-      fullName: admin.fullName,
-      role: admin.role,
-      permissions: admin.permissions,
-      lastLogin: new Date(),
-    };
-
-    return {
-      admin: adminData,
-      token,
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
-    };
+  // 🧩 Case 1: Email not found
+  if (!admin) {
+    const error = new Error('Email not found. Please check your email and try again.');
+    error.code = 'EMAIL_NOT_FOUND';
+    throw error;
   }
+
+  // 🧩 Case 2: Account locked
+  if (admin.isLocked) {
+    const error = new Error('Account is temporarily locked due to multiple failed login attempts');
+    error.code = 'ACCOUNT_LOCKED';
+    throw error;
+  }
+
+  // 🧩 Case 3: Account deactivated
+  if (!admin.isActive) {
+    const error = new Error('Your account has been deactivated. Please contact support.');
+    error.code = 'ACCOUNT_INACTIVE';
+    throw error;
+  }
+
+  // 🧩 Case 4: Invalid password
+  const isPasswordValid = await admin.comparePassword(password);
+  if (!isPasswordValid) {
+    await adminRepository.incrementLoginAttempts(admin._id);
+    const error = new Error('Incorrect password. Please try again.');
+    error.code = 'INVALID_PASSWORD';
+    throw error;
+  }
+
+  // ✅ Success: Reset attempts and update login info
+  await adminRepository.resetLoginAttempts(admin._id);
+  await adminRepository.updateLastLogin(admin._id, ipAddress, userAgent);
+
+  // Generate JWT token
+  const token = this.generateToken(admin);
+
+  const adminData = {
+    id: admin._id,
+    username: admin.username,
+    email: admin.email,
+    fullName: admin.fullName,
+    role: admin.role,
+    permissions: admin.permissions,
+    lastLogin: new Date(),
+  };
+
+  return {
+    admin: adminData,
+    token,
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+  };
+}
+
 
   /**
    * Create new admin
