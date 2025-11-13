@@ -31,11 +31,10 @@ const projectValidation = {
       }),
 
     body('shortAddress')
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
-      .notEmpty()
-      .withMessage('Short address is required')
-      .isLength({ min: 10, max: 300 })
-      .withMessage('Short address must be between 10 and 300 characters'),
+      .isLength({ min: 2, max: 300 })
+      .withMessage('Short address must be between 2 and 300 characters'),
 
     body('locationTitle')
       .trim()
@@ -103,9 +102,8 @@ const projectValidation = {
       .withMessage('Card area must be between 1 and 20 characters'),
 
     body('reraNumber')
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
-      .notEmpty()
-      .withMessage('RERA number is required')
       .isLength({ min: 5, max: 200 })
       .withMessage('RERA number must be between 5 and 200 characters'),
 
@@ -118,11 +116,10 @@ const projectValidation = {
       .withMessage('Project type must be either "residential", "commercial", or "plot"'),
 
     body('shortAddress')
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
-      .notEmpty()
-      .withMessage('Short address is required')
-      .isLength({ max: 300 })
-      .withMessage('Short address cannot exceed 300 characters'),
+      .isLength({ min: 2, max: 300 })
+      .withMessage('Short address must be between 2 and 300 characters'),
 
     body('projectStatusPercentage')
       .isInt({ min: 0, max: 100 })
@@ -161,7 +158,7 @@ const projectValidation = {
       .withMessage('About us alt text cannot exceed 200 characters'),
 
     body('youtubeUrl')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
       .isURL()
       .withMessage('YouTube URL must be a valid URL'),
@@ -327,7 +324,7 @@ const projectValidation = {
       .withMessage('About us alt text cannot exceed 200 characters'),
 
     body('youtubeUrl')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
       .isURL()
       .withMessage('YouTube URL must be a valid URL'),
@@ -383,7 +380,7 @@ const projectValidation = {
       .withMessage('Email 2 must be a valid email address'),
 
     body('mapIframeUrl')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim()
       .isURL()
       .withMessage('Map iframe URL must be a valid URL'),
@@ -411,7 +408,7 @@ const projectValidation = {
       .withMessage('Card house status must be either "Ready to Move" or "Sample House Ready"'),
 
     body('reraNumber')
-      .optional()
+      .optional({ nullable: true, checkFalsy: true })
       .trim(),
   ],
 

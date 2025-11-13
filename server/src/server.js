@@ -21,7 +21,7 @@ app.use(helmet());
 
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
-  : ['http://localhost:5174'];
+  : ['http://localhost:5174,http://192.168.2.143:5174'];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -97,6 +97,21 @@ app.use('/api/banners', bannerRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/projecttree', projectTreeRoutes);
 app.use('/api/blogs', blogRoutes);
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('❌ Error:', err);
+  
+  // Send error response
+  const statusCode = err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    error: {
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    }
+  });
+});
 
 const startServer = async () => {
   try {
