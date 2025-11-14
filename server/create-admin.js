@@ -1,11 +1,29 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+require('dotenv').config();
 
 // Connect to MongoDB
-mongoose.connect('mongodb://localhost:27017/shilp-adminpanel', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-});
+const uri = process.env.DATABASE_URL;
+console.log('Connecting to:', uri);
+
+const clientOptions = { 
+  serverApi: { 
+    version: '1', 
+    strict: true, 
+    deprecationErrors: true 
+  } 
+};
+
+async function connectToDatabase() {
+  try {
+    await mongoose.connect(uri, clientOptions);
+    await mongoose.connection.db.admin().command({ ping: 1 });
+    console.log("✅ Successfully connected to MongoDB!");
+  } catch (error) {
+    console.error('❌ Failed to connect to MongoDB:', error);
+    throw error;
+  }
+}
 
 // Admin Schema (simplified for this script)
 const adminSchema = new mongoose.Schema({
@@ -23,23 +41,23 @@ const Admin = mongoose.model('Admin', adminSchema);
 async function createAdmin() {
   try {
     // Check if admin already exists
-    const existingAdmin = await Admin.findOne({ email: 'admin@shilp.com' });
+    const existingAdmin = await Admin.findOne({ email: 'shilpgroup47@gmail.com' });
     if (existingAdmin) {
       console.log('Admin already exists!');
-      console.log('Email: admin@shilp.com');
-      console.log('Password: admin123');
+      console.log('Email: shilpgroup47@gmail.com');
+      console.log('Password: ShilpGroup@RealState11290');
       process.exit(0);
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash('admin123', 12);
+    const hashedPassword = await bcrypt.hash('ShilpGroup@RealState11290', 12);
 
     // Create admin
     const admin = new Admin({
-      username: 'admin',
-      email: 'admin@shilp.com',
+      username: 'shilpgroup47',
+      email: 'shilpgroup47@gmail.com',
       password: hashedPassword,
-      fullName: 'Super Admin',
+      fullName: 'Shilp Group Admin',
       role: 'super-admin',
       permissions: [
         'users.read', 'users.write', 'users.delete',
@@ -53,8 +71,8 @@ async function createAdmin() {
 
     await admin.save();
     console.log('✅ Admin created successfully!');
-    console.log('Email: admin@shilp.com');
-    console.log('Password: admin123');
+    console.log('Email: shilpgroup47@gmail.com');
+    console.log('Password: ShilpGroup@RealState11290');
     console.log('Role: super-admin');
     
   } catch (error) {
@@ -64,4 +82,14 @@ async function createAdmin() {
   }
 }
 
-createAdmin();
+async function main() {
+  try {
+    await connectToDatabase();
+    await createAdmin();
+  } catch (error) {
+    console.error('Error in main:', error);
+    process.exit(1);
+  }
+}
+
+main();

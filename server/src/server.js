@@ -91,6 +91,7 @@ app.use('/uploads', (req, res, next) => {
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
+    'http://10.13.218.10:5174',
     process.env.CORS_ORIGIN
   ].filter(Boolean);
   

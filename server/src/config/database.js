@@ -2,13 +2,24 @@ const mongoose = require('mongoose');
 
 const connectDatabase = async () => {
   try {
+    // MongoDB connection string from environment
+    const uri = process.env.DATABASE_URL;
+    console.log('Connecting to MongoDB...');
+    
+    const clientOptions = { 
+      serverApi: { 
+        version: '1', 
+        strict: true, 
+        deprecationErrors: true 
+      } 
+    };
 
-    // credentials in source.
-    const dbUrl = process.env.DATABASE_URL 
-
-    await mongoose.connect(dbUrl);
-
-  // Connected to MongoDB
+    // Create a Mongoose client with a MongoClientOptions object to set the Stable API version
+    await mongoose.connect(uri, clientOptions);
+    
+    // Test the connection
+    await mongoose.connection.db.admin().command({ ping: 1 });
+    console.log("✅ Pinged your deployment. You successfully connected to MongoDB!");
 
     // Handle connection events
     mongoose.connection.on('error', (error) => {
@@ -16,11 +27,11 @@ const connectDatabase = async () => {
     });
 
     mongoose.connection.on('disconnected', () => {
-      // MongoDB disconnected
+      console.log('MongoDB disconnected');
     });
 
     mongoose.connection.on('reconnected', () => {
-      // MongoDB reconnected
+      console.log('MongoDB reconnected');
     });
 
   } catch (error) {

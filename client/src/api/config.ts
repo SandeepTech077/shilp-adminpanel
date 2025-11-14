@@ -4,9 +4,9 @@ import type { AxiosRequestConfig } from 'axios';
 
 // Dynamic URL detection based on environment and access method
 const getBaseUrl = (): string => {
-  // Production environment
+  // Production environment - Use environment variable
   if (import.meta.env.PROD) {
-    return 'https://mail.shilpgroup.com';
+    return import.meta.env.VITE_API_BASE_URL || 'https://mail.shilpgroup.com';
   }
   
   // Development environment - Dynamic detection

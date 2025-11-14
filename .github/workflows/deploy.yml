@@ -1,0 +1,81 @@
+name: Deploy to cPanel
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          client/package-lock.json
+          server/package-lock.json
+
+    - name: Install client dependencies
+      working-directory: ./client
+      run: npm ci
+
+    - name: Build client
+      working-directory: ./client
+      run: npm run build
+
+    - name: Install server dependencies
+      working-directory: ./server
+      run: npm ci --omit=dev
+
+    - name: Create deployment package
+      run: |
+        mkdir -p deploy-package/frontend
+        mkdir -p deploy-package/backend
+        
+        # Copy frontend build files
+        cp -r client/dist/* deploy-package/frontend/
+        cp client/.htaccess deploy-package/frontend/
+        
+        # Copy backend files
+        cp -r server/src deploy-package/backend/
+        cp server/package.json deploy-package/backend/
+        cp server/package-lock.json deploy-package/backend/
+        cp server/.env.production deploy-package/backend/.env
+
+    - name: Deploy Frontend to cPanel
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy-package/frontend/
+        server-dir: /public_html/admin/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+
+    - name: Deploy Backend to cPanel
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy-package/backend/
+        server-dir: /home/${{ secrets.CPANEL_USERNAME }}/mail.shilpgroup.com/
+        exclude: |
+          **/.git*
+          **/.git*/**
+          **/node_modules/**
+
+    - name: Restart Node.js App (Optional)
+      run: |
+        echo "Deployment completed!"
+        echo "Manual restart may be required in cPanel Node.js Apps section"
