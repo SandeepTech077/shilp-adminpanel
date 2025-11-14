@@ -4,12 +4,12 @@
 # Save as: /home/username/deploy.sh
 # Make executable: chmod +x /home/username/deploy.sh
 
-# Configuration
+# Configuration - Updated for your cPanel paths
 REPO_URL="https://github.com/SandeepTech077/shilp-adminpanel.git"
-TEMP_DIR="/home/username/temp-deploy"
-FRONTEND_DIR="/public_html/admin"
-BACKEND_DIR="/home/username/mail.shilpgroup.com"
-LOG_FILE="/home/username/deployment.log"
+TEMP_DIR="/home/shilfmfe/temp-deploy"
+FRONTEND_DIR="/home/shilfmfe/public_html/admin.shilpgroup.com"
+BACKEND_DIR="/home/shilfmfe/mail.shilpgroup.com"
+LOG_FILE="/home/shilfmfe/deployment.log"
 
 # Function to log messages
 log_message() {
@@ -65,9 +65,13 @@ npm install --production
 mkdir -p uploads/{banners,blogs,projects,projecttree}
 chmod -R 755 uploads/
 
-# Restart Node.js app (if using cPanel Node.js Apps)
-# Note: This may require manual restart in cPanel interface
-log_message "🔄 Backend deployment complete - Manual restart may be required"
+# Restart Node.js application
+log_message "🔄 Restarting Node.js application..."
+pkill -f "node.*src/server.js" || true
+sleep 2
+cd $BACKEND_DIR
+nohup npm start > /dev/null 2>&1 &
+log_message "✅ Node.js application restarted"
 
 # Cleanup
 log_message "🧹 Cleaning up..."

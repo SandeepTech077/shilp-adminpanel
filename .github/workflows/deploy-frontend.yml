@@ -1,0 +1,53 @@
+name: Deploy Frontend to cPanel
+
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'client/**' ]
+  workflow_dispatch:
+
+jobs:
+  deploy-frontend:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: client/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./client
+      run: npm ci
+    
+    - name: Build Frontend
+      working-directory: ./client
+      run: npm run build
+    
+    - name: Prepare Frontend Files
+      run: |
+        mkdir -p deploy-frontend
+        cp -r client/dist/* deploy-frontend/
+        cp client/.htaccess deploy-frontend/ 2>/dev/null || echo "No .htaccess file found"
+    
+    - name: Deploy Frontend via FTP
+      uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+      with:
+        server: ${{ secrets.FTP_SERVER }}
+        username: ${{ secrets.FTP_USERNAME }}
+        password: ${{ secrets.FTP_PASSWORD }}
+        local-dir: ./deploy-frontend/
+        server-dir: /home/shilfmfe/public_html/admin.shilpgroup.com/
+        exclude: |
+          **/.git*
+          **/.git*/**
+    
+    - name: Deployment Summary
+      run: |
+        echo "✅ Frontend deployed successfully!"
+        echo "🌐 Live URL: https://admin.shilpgroup.com"

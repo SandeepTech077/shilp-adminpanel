@@ -9,15 +9,15 @@
 
 ### Step 2: Repository Configuration
 ```
-Repository Path: /home/username/git-repos/shilp-adminpanel
+Repository Path: /home/shilfmfe/git-repos/shilp-adminpanel
 Clone URL: https://github.com/SandeepTech077/shilp-adminpanel.git
 Branch: main
 ```
 
 ### Step 3: Deployment Path Setup
 ```
-Frontend Deployment: /public_html/admin/
-Backend Deployment: /home/username/mail.shilpgroup.com/
+Frontend Deployment: /home/shilfmfe/public_html/admin.shilpgroup.com/
+Backend Deployment: /home/shilfmfe/mail.shilpgroup.com/
 ```
 
 ### Step 4: Auto-Deploy Hook बनाएं
@@ -27,10 +27,10 @@ cPanel में **Post-receive Hook** script:
 #!/bin/bash
 echo "🚀 Starting Auto-Deployment..."
 
-# Variables
-REPO_PATH="/home/username/git-repos/shilp-adminpanel"
-FRONTEND_PATH="/public_html/admin"
-BACKEND_PATH="/home/username/mail.shilpgroup.com"
+# Variables - Updated for your cPanel paths
+REPO_PATH="/home/shilfmfe/git-repos/shilp-adminpanel"
+FRONTEND_PATH="/home/shilfmfe/public_html/admin.shilpgroup.com"
+BACKEND_PATH="/home/shilfmfe/mail.shilpgroup.com"
 
 # Go to repository
 cd $REPO_PATH
@@ -56,6 +56,12 @@ cp server/.env.production $BACKEND_PATH/.env
 # Install backend dependencies
 cd $BACKEND_PATH
 npm install --production
+
+# Restart Node.js application
+echo "🔄 Restarting Node.js application..."
+pkill -f "node.*src/server.js" || true
+cd $BACKEND_PATH
+nohup npm start > /dev/null 2>&1 &
 
 echo "✅ Deployment Complete!"
 ```
@@ -114,17 +120,17 @@ git push origin main
 
 ```
 FTP_SERVER: ftp.shilpgroup.com (या आपका FTP server)
-FTP_USERNAME: your-cpanel-username
+FTP_USERNAME: shilfmfe
 FTP_PASSWORD: your-cpanel-password  
-CPANEL_USERNAME: your-cpanel-username
+CPANEL_USERNAME: shilfmfe
 ```
 
 ### Step 2: cPanel में Directories Setup
 
 ```bash
 # Make sure these directories exist:
-/public_html/admin/              # For frontend
-/home/username/mail.shilpgroup.com/  # For backend
+/home/shilfmfe/public_html/admin.shilpgroup.com/  # For frontend
+/home/shilfmfe/mail.shilpgroup.com/              # For backend
 ```
 
 ### Step 3: Test Auto-Deployment
@@ -154,6 +160,31 @@ git push origin main
 1. **cPanel** → **Node.js Apps** 
 2. **Restart** application
 3. Or run: `npm install && npm start`
+
+---
+
+## 🚀 Backend-Only Deployment (Quick Updates)
+
+### For Server-Side Only Changes:
+
+```bash
+# Use the backend-only deployment script
+./deploy-backend-only.sh
+```
+
+**This script will:**
+1. ✅ Clone latest repository
+2. ✅ Stop existing Node.js process
+3. ✅ Deploy only backend files to `/home/shilfmfe/mail.shilpgroup.com/`
+4. ✅ Install dependencies
+5. ✅ Restart Node.js application automatically
+6. ✅ Test: https://mail.shilpgroup.com/api/health
+
+**Advantages:**
+- 🔥 Much faster than full deployment
+- 🎯 Only updates backend
+- 🔄 Automatic restart
+- 📋 Detailed logging
 
 ---
 

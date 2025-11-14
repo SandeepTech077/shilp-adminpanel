@@ -1,4 +1,4 @@
-name: Auto-Deploy to cPanel
+name: Deploy Both Frontend & Backend to cPanel
 
 on:
   push:
@@ -53,7 +53,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./deploy/frontend/
-        server-dir: /public_html/admin/
+        server-dir: /home/shilfmfe/public_html/admin.shilpgroup.com/
         exclude: |
           **/.git*
           **/.git*/**
@@ -65,7 +65,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./deploy/backend/
-        server-dir: /home/${{ secrets.CPANEL_USERNAME }}/mail.shilpgroup.com/
+        server-dir: /home/shilfmfe/mail.shilpgroup.com/
         exclude: |
           **/.git*
           **/.git*/**
