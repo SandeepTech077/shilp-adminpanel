@@ -1,67 +1,75 @@
 #!/bin/bash
 
-# 🚀 Auto Deploy Script for Shilp Admin Panel
-# Run: ./auto-deploy.sh
+# 🚀 Auto Deploy Script for Shilp Admin Panel - cPanel
+# Usage: ./auto-deploy.sh
 
-echo "🚀 Starting Auto Deployment..."
-echo "================================"
+echo "🚀 cPanel Deployment Preparation"
+echo "==============================="
 
 # Check if we're in the right directory
-if [ ! -f "package.json" ] && [ ! -d "client" ] && [ ! -d "server" ]; then
+if [ ! -d "client" ] || [ ! -d "server" ]; then
     echo "❌ Error: Please run this script from the project root directory"
     exit 1
 fi
+
+# Clean previous builds
+echo "🧹 Cleaning previous builds..."
+rm -rf deploy-package/
+rm -f frontend-files.zip backend-files.zip
 
 # Build production files
 echo "📦 Building production files..."
 ./build-production.sh
 
 if [ $? -ne 0 ]; then
-    echo "❌ Build failed! Stopping deployment."
+    echo "❌ Build failed! Stopping preparation."
     exit 1
 fi
 
-# Create deployment package
+# Create organized deployment package
 echo "📁 Creating deployment package..."
-mkdir -p deploy-temp/frontend
-mkdir -p deploy-temp/backend
+mkdir -p deploy-package/frontend
+mkdir -p deploy-package/backend
 
-# Copy frontend files
-echo "📱 Packaging frontend..."
-cp -r client/dist/* deploy-temp/frontend/
-cp client/.htaccess deploy-temp/frontend/
+# Frontend files
+echo "📱 Packaging frontend files..."
+cp -r client/dist/* deploy-package/frontend/
+cp client/.htaccess deploy-package/frontend/
 
-# Copy backend files  
-echo "🚀 Packaging backend..."
-cp -r server/src deploy-temp/backend/
-cp server/package.json deploy-temp/backend/
-cp server/package-lock.json deploy-temp/backend/
-cp server/.env.production deploy-temp/backend/.env
+# Backend files  
+echo "🚀 Packaging backend files..."
+cp -r server/src deploy-package/backend/
+cp server/package.json deploy-package/backend/
+cp server/package-lock.json deploy-package/backend/
+cp server/.env.production deploy-package/backend/.env
 
-echo "✅ Deployment package ready!"
+# Create zip files for easy upload
+if command -v zip &> /dev/null; then
+    echo "📦 Creating zip files for easy upload..."
+    cd deploy-package
+    zip -r ../frontend-files.zip frontend/
+    zip -r ../backend-files.zip backend/
+    cd ..
+    echo "✅ Created: frontend-files.zip & backend-files.zip"
+fi
+
 echo ""
-echo "📤 Upload Instructions:"
-echo "======================="
-echo "1. Frontend: Upload 'deploy-temp/frontend/*' to '/public_html/admin/'"
-echo "2. Backend: Upload 'deploy-temp/backend/*' to '/home/username/mail.shilpgroup.com/'"
+echo "✅ Deployment Package Ready!"
+echo "============================"
 echo ""
-echo "🔧 cPanel Steps:"
-echo "1. Go to File Manager"
-echo "2. Upload the files to respective directories"
-echo "3. Go to Node.js Apps and restart the application"
+echo "📤 cPanel Upload Steps:"
+echo "1. Frontend: Upload 'frontend-files.zip' to '/public_html/admin/' and extract"
+echo "2. Backend: Upload 'backend-files.zip' to '/home/username/mail.shilpgroup.com/' and extract"
+echo ""
+echo "🔧 cPanel Configuration:"
+echo "1. Create subdomains: admin.shilpgroup.com & mail.shilpgroup.com"
+echo "2. Setup Node.js App for backend (port 3000, startup: src/server.js)"
+echo "3. Install dependencies: npm install"
+echo "4. Create uploads folders with permissions"
 echo ""
 echo "🧪 Test URLs:"
 echo "- Frontend: https://admin.shilpgroup.com"
 echo "- Backend: https://mail.shilpgroup.com/api/health"
+echo "- Login: shilpgroup47@gmail.com / ShilpGroup@RealState11290"
 echo ""
-echo "🎉 Ready for deployment!"
-
-# Optionally zip the files for easy upload
-if command -v zip &> /dev/null; then
-    echo "📦 Creating zip files..."
-    cd deploy-temp
-    zip -r ../frontend-deploy.zip frontend/
-    zip -r ../backend-deploy.zip backend/
-    cd ..
-    echo "✅ Zip files created: frontend-deploy.zip, backend-deploy.zip"
-fi
+echo "📋 Complete guide: See CPANEL_DEPLOYMENT_GUIDE.md"

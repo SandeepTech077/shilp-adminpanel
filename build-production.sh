@@ -7,7 +7,7 @@ echo "🔨 Starting Production Build..."
 echo "================================"
 
 # Check if in correct directory
-if [ ! -f "package.json" ]; then
+if [ ! -d "client" ] || [ ! -d "server" ]; then
     echo "❌ Error: Run this from project root directory"
     exit 1
 fi
