@@ -35,6 +35,11 @@ jobs:
         
         # Create uploads directory structure
         mkdir -p deploy-backend/uploads/{banners,blogs,projects,projecttree}
+        
+        # Copy existing uploads if they exist
+        if [ -d "server/uploads" ]; then
+          cp -r server/uploads/* deploy-backend/uploads/ 2>/dev/null || true
+        fi
     
     - name: Deploy Backend via FTP
       uses: SamKirkland/FTP-Deploy-Action@v4.3.4
@@ -43,7 +48,7 @@ jobs:
         username: ${{ secrets.FTP_USERNAME }}
         password: ${{ secrets.FTP_PASSWORD }}
         local-dir: ./deploy-backend/
-        server-dir: /home/shilfmfe/mail.shilpgroup.com/
+        server-dir: /home/shilfmfe/site/mail.shilpgroup.com/
         exclude: |
           **/.git*
           **/.git*/**
