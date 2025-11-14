@@ -189,6 +189,9 @@ const ProjectAdminForm = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [toastType, setToastType] = useState<'success' | 'error' | 'warning' | 'info'>('success');
 
+  // Loading state for form submission
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // Auto-generate slug from title
   const generateSlug = (title: string) => {
     return title
@@ -547,6 +550,14 @@ const ProjectAdminForm = () => {
       return;
     }
 
+    // Prevent multiple submissions
+    if (isSubmitting) {
+      console.log('❌ Form submission already in progress');
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
       console.log('📦 Building form data...');
       const formDataToSend = new FormData();
@@ -689,6 +700,10 @@ const ProjectAdminForm = () => {
       setToastType('error');
       setShowToast(true);
       setValidationErrors({});
+    } finally {
+      // Reset loading state regardless of success or error
+      setIsSubmitting(false);
+      console.log('🔄 Form submission completed - loading state reset');
     }
   };
 
@@ -1043,7 +1058,18 @@ const ProjectAdminForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 relative">
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 flex flex-col items-center shadow-2xl">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mb-4"></div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">Creating Project...</h3>
+            <p className="text-sm text-gray-600">Please wait while we save your project</p>
+          </div>
+        </div>
+      )}
+      
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-blue-200 mb-8">
@@ -1058,6 +1084,7 @@ const ProjectAdminForm = () => {
           currentSection={currentSection}
           completedSections={completedSections}
           onSectionChange={handleSectionChange}
+          isDisabled={isSubmitting}
         />
 
         {/* Main Form */}
@@ -1073,9 +1100,9 @@ const ProjectAdminForm = () => {
               <button
                 type="button"
                 onClick={goToPreviousSection}
-                disabled={currentSection === 1}
+                disabled={currentSection === 1 || isSubmitting}
                 className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all ${
-                  currentSection === 1
+                  currentSection === 1 || isSubmitting
                     ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     : 'bg-gray-600 text-white hover:bg-gray-700'
                 }`}
@@ -1090,27 +1117,39 @@ const ProjectAdminForm = () => {
                     type="button"
                     onClick={goToNextSection}
                     className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-all ${
-                      completedSections.has(currentSection)
+                      completedSections.has(currentSection) && !isSubmitting
                         ? 'bg-blue-600 text-white hover:bg-blue-700'
                         : 'bg-gray-400 text-gray-200 cursor-not-allowed'
                     }`}
-                    disabled={!completedSections.has(currentSection)}
+                    disabled={!completedSections.has(currentSection) || isSubmitting}
                   >
-                    {completedSections.has(currentSection) ? 'Next' : 'Complete Section First'}
+                    {isSubmitting 
+                      ? 'Please wait...' 
+                      : completedSections.has(currentSection) ? 'Next' : 'Complete Section First'
+                    }
                     <ArrowRight size={20} />
                   </button>
                 ) : (
                   <button
                     type="submit"
-                    disabled={!allSectionsComplete}
+                    disabled={!allSectionsComplete || isSubmitting}
                     className={`flex items-center gap-2 px-8 py-4 font-bold text-lg rounded-xl transition-all shadow-xl ${
-                      allSectionsComplete
+                      allSectionsComplete && !isSubmitting
                         ? 'bg-linear-to-r from-green-600 to-green-800 text-white hover:from-green-700 hover:to-green-900 hover:shadow-2xl transform hover:scale-105'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
-                    <Save size={24} />
-                    {allSectionsComplete ? 'Create Project' : 'Complete All Sections'}
+                    {isSubmitting ? (
+                      <>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        Creating Project...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={24} />
+                        {allSectionsComplete ? 'Create Project' : 'Complete All Sections'}
+                      </>
+                    )}
                   </button>
                 )}
               </div>

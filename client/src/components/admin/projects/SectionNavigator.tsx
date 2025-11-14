@@ -5,12 +5,14 @@ interface SectionNavigatorProps {
   currentSection: number;
   completedSections: Set<number>;
   onSectionChange: (section: number) => void;
+  isDisabled?: boolean;
 }
 
 const SectionNavigator: React.FC<SectionNavigatorProps> = ({
   currentSection,
   completedSections,
   onSectionChange,
+  isDisabled = false,
 }) => {
   const sections = [
     { id: 1, title: 'Basic Info & About Us', color: 'blue' },
@@ -49,8 +51,11 @@ const SectionNavigator: React.FC<SectionNavigatorProps> = ({
           <div key={section.id} className="flex items-center">
             <button
               type="button"
-              onClick={() => onSectionChange(section.id)}
-              className="flex flex-col items-center space-y-2 group cursor-pointer"
+              onClick={() => !isDisabled && onSectionChange(section.id)}
+              disabled={isDisabled}
+              className={`flex flex-col items-center space-y-2 group ${
+                isDisabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
             >
               <div className={getStepClasses(section.id, section.color)}>
                 {completedSections.has(section.id) ? (
