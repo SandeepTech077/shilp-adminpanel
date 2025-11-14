@@ -23,19 +23,16 @@ app.use(helmet());
 const allowedOrigins = process.env.CORS_ORIGIN 
   ? process.env.CORS_ORIGIN.split(',').map(origin => origin.trim())
   : [
+      // Default development origins
       'http://localhost:5173',
       'http://localhost:5174', 
       'http://localhost:5175',
       'http://localhost:3000',
-      'http://192.168.2.143:5173',
-      'http://192.168.2.143:5174', 
-      'http://192.168.2.143:5175',
+      'http://localhost:4173',
+      'http://localhost:4174',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:5174',
       'http://127.0.0.1:5175',
-      // Add common development ports
-      'http://localhost:4173',
-      'http://localhost:4174',
     ];
 
 app.use(cors({
